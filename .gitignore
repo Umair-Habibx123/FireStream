@@ -1,0 +1,117 @@
+# General
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+*.lock
+*.local
+*.tmp
+*.lock
+*.orig
+*.part
+*.rej
+*.swo
+*.swp
+*.vi
+*~
+*.seed
+*.pid.lock
+
+# IDE specific
+.atom/
+.buildlog/
+.history
+.svn/
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.code-workspace
+migrate_working_dir/
+
+# Flutter/Dart/Pub
+**/doc/api/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+.flutter/
+.pubspec.lock
+
+# Android
+**/android/.gradle/
+**/android/.idea/
+**/android/app/build/
+**/android/build/
+**/android/local.properties
+**/android/captures/
+**/android/.cxx/
+**/android/gradle.properties
+**/android/key.properties
+**/android/key.jks
+
+# iOS
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.framework/
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/.last_build_id
+**/ios/Pods/
+**/ios/Runner.xcworkspace/
+**/ios/Runner.xcodeproj/project.xcworkspace/
+**/ios/Runner.xcodeproj/xcuserdata/
+**/ios/Podfile.lock
+
+# macOS
+**/macos/Flutter/ephemeral/
+**/macos/.symlinks/
+**/macos/Pods/
+**/macos/Runner.xcworkspace/
+**/macos/Runner.xcodeproj/xcuserdata/
+
+# Windows
+**/windows/flutter/ephemeral/
+**/windows/.flutter-plugins
+**/windows/.flutter-plugins-dependencies
+**/windows/runner/flutter_export_environment.sh
+
+# Linux
+**/linux/flutter/ephemeral/
+**/linux/.flutter-plugins
+**/linux/.flutter-plugins-dependencies
+
+# Firebase
+firebase.json
+google-services.json
+GoogleService-Info.plist
+**/android/app/google-services.json
+**/ios/Runner/GoogleService-Info.plist
+
+# Environment files
+.env
+.env.*
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Coverage
+coverage/
+lcov.info
+
+# Obfuscation
+app.*.symbols
+app.*.map.json
+
+# Web
+web/credentials.json
+web/.dart_tool/
+web/build/
+web/.env
+
+# Test generated files
+test/**/output/

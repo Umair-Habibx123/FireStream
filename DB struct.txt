@@ -1,0 +1,130 @@
+<---------------- current db -------------->
+
+users
+||--- {emailNamed} (Document)
+      ||--- email: (String)
+      ||--- profilePic: (String)
+      ||--- username: (String)
+      ||--- contacts (Sub-collection)
+            ||--- blockList (Document)
+                  ||--- contactEmails: (Array of Strings)
+            ||--- savedContacts (Document)
+                  ||--- contactEmails: (Array of Strings)
+
+--------------------------------------------------------------------------------------------------
+
+chats
+||--- {chatId} (document)
+     ||--- chatType (string)
+     ||--- deletedBy (array)
+     ||--- lastMessage (string)
+     ||--- participants (array)
+     ||    ||--- 0 (string)
+     ||    ||--- 1 (string)
+     ||--- timestamp (timestamp)
+     ||--- messages (subcollection)
+          ||--- {messageId} (document)
+               ||--- imageUrls (array)
+               ||--- sender (string)
+               ||--- text (string)
+               ||--- timestamp (timestamp)
+
+--------------------------------------------------------------------------------------------------
+
+groupChats
+||--- {chatId} (document)
+     ||--- chatType (string)
+     ||--- AddMembersBy (string)
+     ||--- MessagesOnlyAdmin (boolean)
+     ||--- SettingOnlyAdmin(boolean)
+     ||--- isGroup (boolean)
+     ||--- groupPhotoUrl (string)
+     ||--- groupName (string)
+     ||--- deletedBy (array)
+     ||--- createdBy (string)
+     ||--- lastMessage (string)
+     ||--- participants (array)
+     ||    ||--- 0 (string)
+     ||    ||--- 1 (string)
+     ||--- admins(array)
+     ||    ||--- 0 (string)
+     ||    ||--- 1 (string)
+     ||--- createdDate (timestamp)
+     ||--- messages (subcollection)
+          ||--- {messageId} (document)
+               ||--- imageUrls (array)
+               ||--- sender (string)
+               ||--- text (string)
+               ||--- timestamp (timestamp)
+
+--------------------------------------------------------------------------------------------------
+
+
+
+
+
+<---------------- Future upgradation db -------------->
+
+
+users
+||--- {emailNamed} (Document)
+     ||--- email: (String)
+     ||--- profilePic: (String)
+     ||--- username: (String)
+     ||--- status (String)   // For WhatsApp-like status updates
+     ||--- lastSeen (Timestamp)  // Last online timestamp
+     ||--- contacts (Sub-collection)
+          ||--- blockList (Sub-collection)
+               ||--- {contactEmail} (Document)
+          ||--- savedContacts (Sub-collection)
+               ||--- {contactEmail} (Document)
+
+
+chats
+||--- {chatId} (document)
+     ||--- chatType (string)
+     ||--- chatName (String)  // For naming DM conversations
+     ||--- participants (array)
+     ||--- pinnedBy (array)   // Array of user emails who pinned the chat
+     ||--- timestamp (timestamp)
+     ||--- messages (subcollection)
+          ||--- {messageId} (document)
+               ||--- sender (string)
+               ||--- text (string)
+               ||--- imageUrls (array)
+               ||--- messageType (string)  // "text", "image", "video", "audio"
+               ||--- timestamp (timestamp)
+
+
+groupChats
+||--- {groupId} (document)
+     ||--- chatType (string)
+     ||--- groupName (string)
+     ||--- groupPhotoUrl (string)
+     ||--- groupDescription (string)  // Optional group description
+     ||--- createdBy (string) 
+     ||--- admins (array)
+     ||--- participants (array)
+     ||--- deletedBy (array) 
+     ||--- createdDate (timestamp)
+     ||--- lastMessage (string)
+     ||--- messages (subcollection)
+          ||--- {messageId} (document)
+               ||--- sender (string)
+               ||--- text (string)
+               ||--- imageUrls (array)
+               ||--- messageType (string)
+               ||--- timestamp (timestamp)
+
+
+
+
+statuses
+||--- {userEmail} (document)
+     ||--- statusUpdates (subcollection)
+          ||--- {statusId} (document)
+               ||--- type (string)  // "text", "image", "video"
+               ||--- content (string)  // Text or media URL
+               ||--- timestamp (timestamp)
+               ||--- expiresAt (timestamp)  // Expiry time
+               ||--- views (array)  // List of user emails who viewed

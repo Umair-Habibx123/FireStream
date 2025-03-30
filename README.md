@@ -1,7 +1,7 @@
 # FireStream Chat App
 
 **FireStream Chat App** is a powerful and feature-rich Flutter application that simplifies real-time communication. It leverages Firebase for seamless integration of authentication, messaging, and group management, offering an engaging chat experience.
-Download APK [APK](https://github.com/Umair-Habibx123/FireStream/raw/main/APK/FireStream.apk)
+Download APK [APK](https://github.com/Umair-Habibx123/FireStream/raw/refs/heads/master/APK/FireStream.apk)
 
 ---
 

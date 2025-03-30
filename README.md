@@ -1,7 +1,7 @@
 # FireStream Chat App
 
 **FireStream Chat App** is a powerful and feature-rich Flutter application that simplifies real-time communication. It leverages Firebase for seamless integration of authentication, messaging, and group management, offering an engaging chat experience.
-Download APK [APK](https://github.com/Umair-Habibx123/FireStream-Chat-App/raw/main/APK/firestream.apk)
+Download APK [APK](https://github.com/Umair-Habibx123/FireStream/raw/main/APK/FireStream.apk)
 
 ---
 
@@ -43,13 +43,13 @@ Download APK [APK](https://github.com/Umair-Habibx123/FireStream-Chat-App/raw/ma
 1. Clone this repository:
 
    ```bash
-   git clone https://github.com/Umair-Habibx123/FireStream-Chat-App
+   git clone https://github.com/Umair-Habibx123/FireStream
    ```
 
 2. Navigate to the project directory:
 
    ```bash
-   cd FireStream-Chat-App
+   cd FireStream
    ```
 
 3. Install dependencies:
@@ -61,6 +61,7 @@ Download APK [APK](https://github.com/Umair-Habibx123/FireStream-Chat-App/raw/ma
 4. Set up Firebase for your project:
 
    - Add your `google-services.json` (for Android) and `GoogleService-Info.plist` (for iOS) to the respective directories.
+   - Add your firebase.json in root dir.
 
 5. Run the app:
    ```bash

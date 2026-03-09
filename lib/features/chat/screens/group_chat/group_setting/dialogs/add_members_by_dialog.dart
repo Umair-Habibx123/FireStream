@@ -18,7 +18,8 @@ class AddMembersByDialog extends StatefulWidget {
 class _AddMembersByDialogState extends State<AddMembersByDialog> {
   String _selectedValue = 'anyone';
   bool _isLoading = true;
-  String _errorMessage = '';
+  bool _isSaving = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -26,129 +27,279 @@ class _AddMembersByDialogState extends State<AddMembersByDialog> {
     _loadCurrentSetting();
   }
 
-  // Future<void> _loadCurrentSetting() async {
-  //   try {
-  //     final doc = await FirebaseFirestore.instance
-  //         .collection('groupChats')
-  //         .doc(widget.chatId)
-  //         .get();
-
-  //     final data = doc.data() as Map<String, dynamic>?;
-  //     _selectedValue = data?['AddMembersBy'] ?? 'anyone';
-  //   } catch (e) {
-  //     _errorMessage = "Failed to load existing value: ${e.toString()}";
-  //   } finally {
-  //     setState(() => _isLoading = false);
-  //   }
-  // }
-
-Future<void> _loadCurrentSetting() async {
+  Future<void> _loadCurrentSetting() async {
     try {
       final doc = await FirebaseFirestore.instance
           .collection('groupChats')
           .doc(widget.chatId)
           .get();
-
-      final data = doc.data(); // No need for cast
-      _selectedValue = data?['AddMembersBy'] ?? 'anyone';
+      final data = doc.data();
+      setState(() => _selectedValue = data?['AddMembersBy'] ?? 'anyone');
     } catch (e) {
-      _errorMessage = "Failed to load existing value: ${e.toString()}";
+      setState(() => _errorMessage = "Failed to load setting: ${e.toString()}");
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  
+  Future<void> _handleSave() async {
+    setState(() {
+      _isSaving = true;
+      _errorMessage = null;
+    });
+    try {
+      await widget.onSave(_selectedValue);
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      setState(() => _errorMessage = "Failed to update: ${e.toString()}");
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 0,
+      backgroundColor: Colors.white,
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Who can Add Members',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            _isLoading
-                ? const CircularProgressIndicator()
-                : Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _selectedValue,
-                        isExpanded: true,
-                        items: const [
-                          DropdownMenuItem(
-                              value: 'anyone', child: Text('Anyone')),
-                          DropdownMenuItem(
-                              value: 'admin only', child: Text('Admin Only')),
-                        ],
-                        onChanged: (String? newValue) {
-                          if (newValue != null) {
-                            setState(() => _selectedValue = newValue);
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-            if (_errorMessage.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: Text(
-                  _errorMessage,
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ),
-            const SizedBox(height: 20),
+            // Header
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey[300],
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE3F2FD),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel', style: TextStyle(color: Colors.black)),
+                  child: const Icon(
+                    Icons.group_add_rounded,
+                    color: Color(0xFF1565C0),
+                    size: 20,
+                  ),
                 ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Who Can Add Members',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1A1A2E),
+                      letterSpacing: -0.3,
+                    ),
                   ),
-                  onPressed: _handleSave,
-                  child: const Text('Save', style: TextStyle(color: Colors.white)),
                 ),
               ],
-            )
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Control who is allowed to add new members to this group.',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade500,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Content
+            if (_isLoading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Color(0xFF1565C0),
+                    ),
+                  ),
+                ),
+              )
+            else ...[
+              Text(
+                'Permission',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade500,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _buildOptionCard(
+                value: 'anyone',
+                label: 'Anyone',
+                subtitle: 'All members can add new participants',
+                icon: Icons.people_rounded,
+              ),
+              const SizedBox(height: 8),
+              _buildOptionCard(
+                value: 'admin only',
+                label: 'Admins Only',
+                subtitle: 'Only group admins can add participants',
+                icon: Icons.admin_panel_settings_rounded,
+              ),
+            ],
+
+            // Error
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFEBEE),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded,
+                        color: Color(0xFFD32F2F), size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(
+                            color: Color(0xFFD32F2F), fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 24),
+            // Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    onPressed: (_isLoading || _isSaving)
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      backgroundColor: const Color(0xFF1565C0),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: (_isLoading || _isSaving) ? null : _handleSave,
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text('Save',
+                            style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
 
-  Future<void> _handleSave() async {
-    setState(() => _isLoading = true);
-
-    try {
-      await widget.onSave(_selectedValue);
-      if (mounted) Navigator.of(context).pop();
-    } catch (e) {
-      setState(() {
-        _errorMessage = "Failed to update: ${e.toString()}";
-      });
-    } finally {
-      setState(() => _isLoading = false);
-    }
+  Widget _buildOptionCard({
+    required String value,
+    required String label,
+    required String subtitle,
+    required IconData icon,
+  }) {
+    final isSelected = _selectedValue == value;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedValue = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFFE3F2FD)
+              : const Color(0xFFF5F7FA),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF1565C0)
+                : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? const Color(0xFF1565C0)
+                    : Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon,
+                  size: 18,
+                  color: isSelected ? Colors.white : Colors.grey.shade500),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected
+                          ? const Color(0xFF1565C0)
+                          : const Color(0xFF1A1A2E),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                        fontSize: 12, color: Colors.grey.shade500),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              const Icon(Icons.check_circle_rounded,
+                  color: Color(0xFF1565C0), size: 20),
+          ],
+        ),
+      ),
+    );
   }
 }

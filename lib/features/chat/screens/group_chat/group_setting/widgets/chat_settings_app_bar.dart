@@ -10,31 +10,21 @@ class ChatSettingsAppBar extends StatelessWidget implements PreferredSizeWidget 
         "Group Settings",
         style: TextStyle(
           color: Colors.white,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
           fontSize: 20,
+          letterSpacing: -0.3,
         ),
       ),
       centerTitle: true,
-      backgroundColor: Colors.blueAccent,
+      backgroundColor: const Color(0xFF1565C0),
       iconTheme: const IconThemeData(color: Colors.white),
       elevation: 0,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(12),
-        ),
-      ),
       flexibleSpace: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Colors.blueAccent,
-              Colors.blue.shade700,
-            ],
-          ),
-          borderRadius: const BorderRadius.vertical(
-            bottom: Radius.circular(12),
+            colors: [Color(0xFF1565C0), Color(0xFF1976D2)],
           ),
         ),
       ),
@@ -42,5 +32,5 @@ class ChatSettingsAppBar extends StatelessWidget implements PreferredSizeWidget 
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight + 10);
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }

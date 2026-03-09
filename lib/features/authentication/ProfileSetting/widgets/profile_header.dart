@@ -24,118 +24,126 @@ class ProfileHeader extends StatelessWidget {
           alignment: Alignment.bottomRight,
           children: [
             Container(
-              width: 120,
-              height: 120,
+              width: 110,
+              height: 110,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.blue.shade200, width: 2.5),
+                border: Border.all(color: Colors.white, width: 3),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.blue.shade100.withOpacity(0.3),
-                    blurRadius: 10,
-                    spreadRadius: 2,
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
                   ),
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(60),
-                child:
-                    isLoading
-                        ? Center(
+                borderRadius: BorderRadius.circular(55),
+                child: isLoading
+                    ? Container(
+                        color: Colors.white.withOpacity(0.2),
+                        child: const Center(
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.blueAccent,
+                            color: Colors.white,
                           ),
-                        )
-                        : photoURL.isNotEmpty
+                        ),
+                      )
+                    : photoURL.isNotEmpty
                         ? Image.network(
-                          photoURL,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Center(
-                              child: CircularProgressIndicator(
-                                value:
-                                    loadingProgress.expectedTotalBytes != null
+                            photoURL,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                color: Colors.white.withOpacity(0.15),
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    value: loadingProgress.expectedTotalBytes !=
+                                            null
                                         ? loadingProgress
                                                 .cumulativeBytesLoaded /
                                             (loadingProgress
                                                     .expectedTotalBytes ??
                                                 1)
                                         : null,
-                              ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return Icon(
-                              Icons.person,
-                              size: 48,
-                              color: Colors.blue.shade300,
-                            );
-                          },
-                        )
-                        : Icon(
-                          Icons.person,
-                          size: 48,
-                          color: Colors.blue.shade300,
-                        ),
-              ),
-            ),
-            // In the ProfileHeader widget's Stack
-            Positioned(
-              bottom: 0,
-              right: 0,
-              child: GestureDetector(
-                onTap: isLoading ? null : onEditPhoto,
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: isLoading ? Colors.grey : Colors.blueAccent,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child:
-                      isLoading
-                          ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              );
+                            },
+                            errorBuilder: (_, __, ___) => Container(
+                              color: Colors.white.withOpacity(0.2),
+                              child: const Icon(Icons.person,
+                                  size: 48, color: Colors.white),
                             ),
                           )
-                          : const Icon(
-                            Icons.edit,
-                            size: 20,
-                            color: Colors.white,
+                        : Container(
+                            color: Colors.white.withOpacity(0.2),
+                            child: const Icon(Icons.person,
+                                size: 48, color: Colors.white),
                           ),
+              ),
+            ),
+
+            // Edit button
+            GestureDetector(
+              onTap: isLoading ? null : onEditPhoto,
+              child: Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: isLoading ? Colors.grey : Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 6,
+                    ),
+                  ],
                 ),
+                child: isLoading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Icon(Icons.camera_alt_rounded,
+                        size: 16, color: Colors.blue.shade600),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
+
         Text(
           username,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade800,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+            letterSpacing: 0.3,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
           decoration: BoxDecoration(
-            color: Colors.blue.shade50,
-            borderRadius: BorderRadius.circular(12),
+            color: Colors.white.withOpacity(0.18),
+            borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
             email,
-            style: TextStyle(fontSize: 16, color: Colors.blue.shade700),
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.white,
+              fontWeight: FontWeight.w400,
+            ),
           ),
         ),
-        const SizedBox(height: 24),
       ],
     );
   }

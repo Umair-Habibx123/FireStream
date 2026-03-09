@@ -10,15 +10,13 @@ import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Load environment variables
   await dotenv.load(fileName: ".env");
   await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform, // Initialize with options
+    options: DefaultFirebaseOptions.currentPlatform,
   );
-
   runApp(
     ChangeNotifierProvider(
-      create: (context) => ConnectivityService(),
+      create: (_) => ConnectivityService(),
       child: const MyApp(),
     ),
   );
@@ -29,26 +27,31 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ConnectivityService>(
-      builder: (context, connectivityService, child) {
-        return GetMaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: const SplashScreen(),
-          builder: (context, child) {
+    return GetMaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorSchemeSeed: const Color(0xFF1565C0),
+        useMaterial3: true,
+      ),
+      home: const SplashScreen(),
+      builder: (context, child) {
+        return Consumer<ConnectivityService>(
+          builder: (context, connectivity, _) {
             return Stack(
               children: [
                 child!,
-                if (!connectivityService.hasInternet)
+                if (!connectivity.hasInternet) ...[
+                  // Blurred barrier
                   ModalBarrier(
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black.withOpacity(0.55),
                     dismissible: false,
                   ),
-                if (!connectivityService.hasInternet)
                   Center(
                     child: NoInternetModal(
-                      onRetry: connectivityService.retryConnection,
+                      onRetry: connectivity.retryConnection,
                     ),
                   ),
+                ],
               ],
             );
           },

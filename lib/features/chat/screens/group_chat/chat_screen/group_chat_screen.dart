@@ -29,7 +29,8 @@ class GroupChatScreen extends StatefulWidget {
   _GroupChatScreenState createState() => _GroupChatScreenState();
 }
 
-class _GroupChatScreenState extends State<GroupChatScreen> {
+class _GroupChatScreenState extends State<GroupChatScreen>
+    with WidgetsBindingObserver {
   final TextEditingController _messageController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   final List<File> _selectedImages = [];
@@ -41,31 +42,174 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _fetchAdminSettings();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _messageController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchAdminSettings() async {
     try {
-      DocumentSnapshot chatSettingsDoc =
-          await FirebaseFirestore.instance
-              .collection('groupChats')
-              .doc(widget.chatId)
-              .get();
+      final doc = await FirebaseFirestore.instance
+          .collection('groupChats')
+          .doc(widget.chatId)
+          .get();
 
-      _messagesOnlyAdmin = chatSettingsDoc['MessagesOnlyAdmin'] ?? false;
+      _messagesOnlyAdmin = doc['MessagesOnlyAdmin'] ?? false;
 
       if (_messagesOnlyAdmin) {
-        List<String> adminEmails = List<String>.from(
-          chatSettingsDoc['admins'] ?? [],
-        );
-
-        _canSendMessages = adminEmails.contains(widget.currentUserEmail);
+        List<String> admins = List<String>.from(doc['admins'] ?? []);
+        _canSendMessages = admins.contains(widget.currentUserEmail);
       }
 
       setState(() {});
     } catch (e) {
-      print('Failed to fetch admin settings: $e');
+      debugPrint('Failed to fetch admin settings: $e');
     }
+  }
+
+  void _sendMessage() async {
+    if (_messageController.text.trim().isEmpty && _selectedImages.isEmpty)
+      return;
+
+    setState(() => _isUploading = true);
+
+    try {
+      List<String> uploadedImageUrls = [];
+      for (File imageFile in _selectedImages) {
+        String? imageUrl = await _uploadImage(imageFile);
+        if (imageUrl != null) uploadedImageUrls.add(imageUrl);
+      }
+
+      await FirebaseFirestore.instance
+          .collection('groupChats')
+          .doc(widget.chatId)
+          .collection('messages')
+          .add({
+        'text': _messageController.text.trim(),
+        'sender': widget.currentUserEmail,
+        'timestamp': FieldValue.serverTimestamp(),
+        'imageUrls': uploadedImageUrls,
+      });
+
+      // Update last message on group doc
+      await FirebaseFirestore.instance
+          .collection('groupChats')
+          .doc(widget.chatId)
+          .update({
+        'lastMessage': _messageController.text.trim().isNotEmpty
+            ? _messageController.text.trim()
+            : '📷 Photo',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      _messageController.clear();
+      _selectedImages.clear();
+    } catch (e) {
+      debugPrint('Failed to send message: $e');
+    } finally {
+      setState(() => _isUploading = false);
+    }
+  }
+
+  Future<void> _pickImages() async {
+    try {
+      final List<XFile> pickedFiles = await _picker.pickMultiImage();
+      for (XFile f in pickedFiles) {
+        _selectedImages.add(File(f.path));
+      }
+      setState(() {});
+    } catch (e) {
+      debugPrint('Failed to pick images: $e');
+    }
+  }
+
+  Future<String?> _uploadImage(File imageFile) async {
+    try {
+      String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+      TaskSnapshot task = await FirebaseStorage.instance
+          .ref('chat_images/$fileName')
+          .putFile(imageFile);
+      return await task.ref.getDownloadURL();
+    } catch (e) {
+      debugPrint('Failed to upload image: $e');
+      return null;
+    }
+  }
+
+  void _removeImage(int index) =>
+      setState(() => _selectedImages.removeAt(index));
+
+  void _viewImage(String imageUrl) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+          builder: (_) => GroupImagePreviewScreen(imageUrl: imageUrl)),
+    );
+  }
+
+  void _deleteMessage(String messageId) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('groupChats')
+          .doc(widget.chatId)
+          .collection('messages')
+          .doc(messageId)
+          .get();
+
+      if (snapshot.exists) {
+        List<dynamic> imageUrls = snapshot['imageUrls'] ?? [];
+        for (String url in imageUrls) {
+          try {
+            await FirebaseStorage.instance
+                .refFromURL(Uri.decodeFull(url.split('?')[0]))
+                .delete();
+          } catch (_) {}
+        }
+
+        await FirebaseFirestore.instance
+            .collection('groupChats')
+            .doc(widget.chatId)
+            .collection('messages')
+            .doc(messageId)
+            .delete();
+      }
+    } catch (e) {
+      debugPrint('Error deleting message: $e');
+    }
+  }
+
+  void _showDeleteConfirmation(String messageId) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Message',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+        content: const Text('Are you sure you want to delete this message?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cancel',
+                style: TextStyle(color: Colors.grey.shade600)),
+          ),
+          TextButton(
+            onPressed: () {
+              _deleteMessage(messageId);
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Delete',
+                style: TextStyle(
+                    color: Color(0xFFE53935), fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showMessageOptions({
@@ -77,347 +221,185 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   }) {
     showModalBottomSheet(
       context: context,
-      builder: (BuildContext context) {
-        return Wrap(
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            if (isImageMessage && imageUrl != null) ...[
-              ListTile(
-                leading: const Icon(Icons.save_alt),
-                title: const Text('Save'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _saveImage(imageUrl);
-                },
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
               ),
-              ListTile(
-                leading: const Icon(Icons.forward),
-                title: const Text('Forward'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _forwardMessage(imageUrl, isImage: true);
-                },
-              ),
-              if (isSentByCurrentUser)
-                ListTile(
-                  leading: const Icon(Icons.delete),
-                  title: const Text('Delete'),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    _showDeleteConfirmation(messageId);
-                  },
-                ),
-            ] else if (!isImageMessage && messageText != null) ...[
-              ListTile(
-                leading: const Icon(Icons.copy),
-                title: const Text('Copy'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _copyToClipboard(messageText);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.forward),
-                title: const Text('Forward'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _forwardMessage(messageText, isImage: false);
-                },
-              ),
-              if (isSentByCurrentUser)
-                ListTile(
-                  leading: const Icon(Icons.delete),
-                  title: const Text('Delete'),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    _showDeleteConfirmation(messageId);
-                  },
-                ),
-            ],
+            ),
+            const SizedBox(height: 8),
+            if (!isImageMessage && messageText != null)
+              _sheetTile(ctx, Icons.copy_rounded, 'Copy', Colors.blueAccent,
+                  () {
+                Clipboard.setData(ClipboardData(text: messageText));
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Copied to clipboard'),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    margin: const EdgeInsets.all(16),
+                  ),
+                );
+              }),
+            if (isImageMessage && imageUrl != null)
+              _sheetTile(
+                  ctx, Icons.download_rounded, 'Save', Colors.blueAccent,
+                  () async {
+                Navigator.pop(ctx);
+                await _saveImage(imageUrl);
+              }),
+            _sheetTile(ctx, Icons.forward_rounded, 'Forward', Colors.teal,
+                () => Navigator.pop(ctx)),
+            if (isSentByCurrentUser)
+              _sheetTile(ctx, Icons.delete_rounded, 'Delete', Colors.red, () {
+                Navigator.pop(ctx);
+                _showDeleteConfirmation(messageId);
+              }),
+            const SizedBox(height: 8),
           ],
-        );
-      },
-    );
-  }
-
-  void _copyToClipboard(String text) {
-    Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Text copied to clipboard')));
-  }
-
-  void _forwardMessage(String content, {required bool isImage}) {
-    print(isImage ? 'Forwarding image: $content' : 'Forwarding text: $content');
-  }
-
-  Future<void> _saveImage(String imageUrl) async {
-    try {
-      String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
-
-      if (selectedDirectory == null) {
-        print("Folder selection canceled.");
-        return;
-      }
-
-      print("Selected folder: $selectedDirectory");
-
-      Dio dio = Dio();
-      String fileName = imageUrl.split('/').last.split('?').first;
-      String savePath = '$selectedDirectory/$fileName';
-
-      print("Saving image to: $savePath");
-
-      await dio.download(imageUrl, savePath);
-
-      print("Image saved successfully to $savePath");
-    } catch (e) {
-      print("Error saving image: $e");
-    }
-  }
-
-  void _sendMessage() async {
-    if (_messageController.text.trim().isEmpty && _selectedImages.isEmpty) {
-      return;
-    }
-
-    setState(() {
-      _isUploading = true;
-    });
-
-    try {
-      List<String> uploadedImageUrls = [];
-
-      for (File imageFile in _selectedImages) {
-        String? imageUrl = await _uploadImage(imageFile);
-        if (imageUrl != null) {
-          uploadedImageUrls.add(imageUrl);
-        }
-      }
-
-      await FirebaseFirestore.instance
-          .collection('groupChats')
-          .doc(widget.chatId)
-          .collection('messages')
-          .add({
-            'text': _messageController.text.trim(),
-            'sender': widget.currentUserEmail,
-            'timestamp': FieldValue.serverTimestamp(),
-            'imageUrls': uploadedImageUrls,
-          });
-
-      _messageController.clear();
-      _selectedImages.clear();
-    } catch (e) {
-      print('Failed to send message: $e');
-    } finally {
-      setState(() {
-        _isUploading = false;
-      });
-    }
-  }
-
-  Future<void> _pickImages() async {
-    try {
-      final List<XFile> pickedFiles = await _picker.pickMultiImage();
-
-      for (XFile pickedFile in pickedFiles) {
-        File imageFile = File(pickedFile.path);
-        _selectedImages.add(imageFile);
-      }
-
-      setState(() {});
-    } catch (e) {
-      print('Failed to pick images: $e');
-    }
-  }
-
-  Future<String?> _uploadImage(File imageFile) async {
-    setState(() {
-      _isUploading = true;
-    });
-
-    try {
-      String fileName = DateTime.now().millisecondsSinceEpoch.toString();
-      TaskSnapshot uploadTask = await FirebaseStorage.instance
-          .ref('chat_images/$fileName')
-          .putFile(imageFile);
-      String imageUrl = await uploadTask.ref.getDownloadURL();
-      return imageUrl;
-    } catch (e) {
-      print('Failed to upload image: $e');
-      return null;
-    } finally {
-      setState(() {
-        _isUploading = false;
-      });
-    }
-  }
-
-  void _removeImage(int index) {
-    setState(() {
-      _selectedImages.removeAt(index);
-    });
-  }
-
-  void _viewImage(String imageUrl) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => GroupImagePreviewScreen(imageUrl: imageUrl),
+        ),
       ),
     );
   }
 
-  void _deleteMessage(String messageId) async {
-    try {
-      DocumentSnapshot messageSnapshot =
-          await FirebaseFirestore.instance
-              .collection('groupChats')
-              .doc(widget.chatId)
-              .collection('messages')
-              .doc(messageId)
-              .get();
-
-      if (messageSnapshot.exists) {
-        List<dynamic> imageUrls = messageSnapshot['imageUrls'] ?? [];
-
-        if (imageUrls.isNotEmpty) {
-          for (String imageUrl in imageUrls) {
-            String path = imageUrl.split('?')[0];
-            String imagePath = Uri.decodeFull(path);
-
-            await FirebaseStorage.instance.refFromURL(imagePath).delete();
-          }
-        }
-
-        await FirebaseFirestore.instance
-            .collection('groupChats')
-            .doc(widget.chatId)
-            .collection('messages')
-            .doc(messageId)
-            .delete();
-      }
-    } catch (e) {
-      print('Error deleting message: $e');
-    }
-  }
-
-  void _showDeleteConfirmation(String messageId) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Delete Message'),
-          content: const Text('Are you sure you want to delete this message?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                _deleteMessage(messageId);
-                Navigator.of(context).pop();
-              },
-              child: const Text('Delete'),
-            ),
-          ],
-        );
-      },
+  Widget _sheetTile(BuildContext ctx, IconData icon, String label, Color color,
+      VoidCallback onTap) {
+    return ListTile(
+      leading: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: color, size: 20),
+      ),
+      title: Text(
+        label,
+        style: TextStyle(
+          fontWeight: FontWeight.w500,
+          color: label == 'Delete'
+              ? const Color(0xFFE53935)
+              : const Color(0xFF1A1A2E),
+        ),
+      ),
+      onTap: onTap,
     );
   }
 
   void _showUserInfo(String email) async {
-    DocumentSnapshot userDoc =
-        await FirebaseFirestore.instance.collection('users').doc(email).get();
-    String username = userDoc['username'];
-    String profilePicUrl = userDoc['profilePic'];
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(email)
+        .get();
+    final data = userDoc.data();
+    if (data == null || !mounted) return;
+
+    final username = data['username'] as String? ?? email;
+    final profilePicUrl = data['profilePic'] as String? ?? '';
 
     showDialog(
       context: context,
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.blue.shade100, width: 2),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(40),
-                    child:
-                        profilePicUrl.isNotEmpty
-                            ? Image.network(
-                              profilePicUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder:
-                                  (_, __, ___) => Icon(
-                                    Icons.person,
-                                    size: 40,
-                                    color: Colors.blue.shade300,
-                                  ),
-                            )
-                            : Icon(
-                              Icons.person,
-                              size: 40,
-                              color: Colors.blue.shade300,
-                            ),
-                  ),
+      builder: (ctx) => Dialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                      color: Colors.blue.shade100, width: 2.5),
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  username,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade800,
-                  ),
+                child: CircleAvatar(
+                  radius: 44,
+                  backgroundColor: Colors.blue.shade50,
+                  backgroundImage: profilePicUrl.isNotEmpty
+                      ? NetworkImage(profilePicUrl)
+                      : null,
+                  child: profilePicUrl.isEmpty
+                      ? Icon(Icons.person_rounded,
+                          size: 44, color: Colors.blue.shade300)
+                      : null,
                 ),
-                const SizedBox(height: 8),
-                Text(
+              ),
+              const SizedBox(height: 16),
+              Text(
+                username,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1A1A2E),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
                   email,
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                  style: TextStyle(
+                      fontSize: 13, color: Colors.blue.shade700),
                 ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.blueAccent,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Close'),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1565C0),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
+                  child: const Text('Close'),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
+  }
+
+  Future<void> _saveImage(String imageUrl) async {
+    try {
+      String? dir = await FilePicker.platform.getDirectoryPath();
+      if (dir == null) return;
+      String fileName = imageUrl.split('/').last.split('?').first;
+      await Dio().download(imageUrl, '$dir/$fileName');
+    } catch (e) {
+      debugPrint('Error saving image: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: const Color(0xFFF0F4F8),
       appBar: GroupChatAppBar(
         groupName: widget.groupName,
         groupPhotoUrl: widget.groupPhotoUrl,
@@ -426,75 +408,84 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       body: Column(
         children: [
           Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.white, Colors.blue.shade50.withOpacity(0.3)],
-                ),
-              ),
-              child: StreamBuilder<QuerySnapshot>(
-                stream:
-                    FirebaseFirestore.instance
-                        .collection('groupChats')
-                        .doc(widget.chatId)
-                        .collection('messages')
-                        .orderBy('timestamp', descending: true)
-                        .snapshots(),
-                builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-                  if (!snapshot.hasData) {
-                    return Center(
-                      child: CircularProgressIndicator.adaptive(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Colors.blueAccent,
-                        ),
-                      ),
-                    );
-                  }
-                  var messages = snapshot.data!.docs;
-                  return ListView.builder(
-                    reverse: true,
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('groupChats')
+                  .doc(widget.chatId)
+                  .collection('messages')
+                  .orderBy('timestamp', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF1565C0),
+                      strokeWidth: 2.5,
                     ),
-                    itemCount: messages.length,
-                    itemBuilder: (context, index) {
-                      var message = messages[index];
-                      bool isSentByCurrentUser =
-                          message['sender'] == widget.currentUserEmail;
-
-                      return GroupMessageBubble(
-                        messageText: message['text'] ?? '',
-                        senderEmail: message['sender'],
-                        currentUserEmail: widget.currentUserEmail,
-                        imageUrls: message['imageUrls'],
-                        timestamp: message['timestamp'],
-                        onLongPress: (_) {
-                          bool isImageMessage =
-                              message['imageUrls'] != null &&
-                              (message['imageUrls'] as List).isNotEmpty;
-                          String? imageUrl =
-                              isImageMessage ? message['imageUrls'][0] : null;
-                          String? messageText = message['text'];
-                          _showMessageOptions(
-                            isSentByCurrentUser: isSentByCurrentUser,
-                            isImageMessage: isImageMessage,
-                            messageId: message.id,
-                            messageText: messageText,
-                            imageUrl: imageUrl,
-                          );
-                        },
-                        onUserTap: _showUserInfo,
-                        onImageTap: _viewImage, // Pass the image tap handler
-                      );
-                    },
                   );
-                },
-              ),
+                }
+
+                final messages = snapshot.data!.docs;
+
+                if (messages.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.group_outlined,
+                            size: 56, color: Colors.grey.shade300),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No messages yet',
+                          style: TextStyle(
+                              color: Colors.grey.shade400, fontSize: 16),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Be the first to say something! 👋',
+                          style: TextStyle(
+                              color: Colors.grey.shade400, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  reverse: true,
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 12),
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final message = messages[index];
+                    final isMine =
+                        message['sender'] == widget.currentUserEmail;
+                    final isImageMessage =
+                        message['imageUrls'] != null &&
+                            (message['imageUrls'] as List).isNotEmpty;
+
+                    return GroupMessageBubble(
+                      messageText: message['text'] ?? '',
+                      senderEmail: message['sender'],
+                      currentUserEmail: widget.currentUserEmail,
+                      imageUrls: message['imageUrls'],
+                      timestamp: message['timestamp'],
+                      onLongPress: (_) => _showMessageOptions(
+                        isSentByCurrentUser: isMine,
+                        isImageMessage: isImageMessage,
+                        messageId: message.id,
+                        messageText: message['text'],
+                        imageUrl: isImageMessage
+                            ? message['imageUrls'][0]
+                            : null,
+                      ),
+                      onUserTap: _showUserInfo,
+                      onImageTap: _viewImage,
+                    );
+                  },
+                );
+              },
             ),
           ),
           GroupMessageInput(

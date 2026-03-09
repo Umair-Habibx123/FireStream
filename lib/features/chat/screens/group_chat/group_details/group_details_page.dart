@@ -26,701 +26,564 @@ class GroupDetailsPage extends StatefulWidget {
 
 class _GroupDetailsPageState extends State<GroupDetailsPage> {
   String? currentUserEmail;
-  bool settingOnlyAdmin = false;
   bool currentUserIsAdmin = false;
 
   @override
   void initState() {
     super.initState();
-    fetchCurrentUserEmail();
+    _loadCurrentUserEmail();
   }
 
-  Future<void> fetchCurrentUserEmail() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      currentUserEmail = prefs.getString('userEmail');
-    });
+  Future<void> _loadCurrentUserEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() => currentUserEmail = prefs.getString('userEmail'));
   }
 
   Future<bool> _isBlocked(String email) async {
-  // Check if current user is blocked by the target user
-  final targetUserBlocklist = await FirebaseFirestore.instance
-      .collection('users')
-      .doc(email)
-      .collection('contacts')
-      .doc('blockList')
-      .get();
+    final targetDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(email)
+        .collection('contacts')
+        .doc('blockList')
+        .get();
+    if (targetDoc.exists &&
+        (targetDoc.data()?['contactEmails'] as List?)
+                ?.contains(currentUserEmail) ==
+            true) return true;
 
-  if (targetUserBlocklist.exists && 
-      (targetUserBlocklist.data()?['contactEmails'] as List?)?.contains(currentUserEmail) == true) {
-    return true;
+    final myDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUserEmail)
+        .collection('contacts')
+        .doc('blockList')
+        .get();
+    if (myDoc.exists &&
+        (myDoc.data()?['contactEmails'] as List?)?.contains(email) == true)
+      return true;
+
+    return false;
   }
 
-  // Check if target user is in current user's blocklist
-  final currentUserBlocklist = await FirebaseFirestore.instance
-      .collection('users')
-      .doc(currentUserEmail)
-      .collection('contacts')
-      .doc('blockList')
-      .get();
-
-  if (currentUserBlocklist.exists && 
-      (currentUserBlocklist.data()?['contactEmails'] as List?)?.contains(email) == true) {
-    return true;
-  }
-
-  return false;
-}
-
-  Future<bool> checkIfCurrentUserIsAdmin(String currentUserEmail) async {
+  Future<bool> _checkIfAdmin(String email) async {
     try {
-      DocumentSnapshot groupDoc =
-          await FirebaseFirestore.instance
-              .collection('groupChats')
-              .doc(widget.chatId)
-              .get();
-
-      if (groupDoc.exists) {
-        List<dynamic> admins = groupDoc['admins'];
-        return admins.contains(currentUserEmail);
-      }
-      return false;
-    } catch (e) {
-      print("Error checking admin status: $e");
+      final doc = await FirebaseFirestore.instance
+          .collection('groupChats')
+          .doc(widget.chatId)
+          .get();
+      return (doc['admins'] as List).contains(email);
+    } catch (_) {
       return false;
     }
   }
 
-  void showSnackbar(String message) {
+  void _snackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.redAccent,
-        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor:
+            isError ? Colors.red.shade600 : const Color(0xFF1565C0),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
 
-  Future<void> _addParticipantsToThisGroups() async {
+  Future<bool?> _confirm(String title, String body,
+      {String confirmLabel = 'Confirm', Color confirmColor = const Color(0xFFE53935)}) {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(title,
+            style: const TextStyle(fontWeight: FontWeight.w700)),
+        content: Text(body),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel',
+                style: TextStyle(color: Colors.grey.shade600)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(confirmLabel,
+                style: TextStyle(
+                    color: confirmColor, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _addParticipants() async {
     try {
-      DocumentSnapshot groupDoc =
-          await FirebaseFirestore.instance
-              .collection('groupChats')
-              .doc(widget.chatId)
-              .get();
+      final groupDoc = await FirebaseFirestore.instance
+          .collection('groupChats')
+          .doc(widget.chatId)
+          .get();
 
       if (!groupDoc.exists) {
-        showSnackbar("Group does not exist.");
+        _snackBar('Group does not exist.', isError: true);
         return;
       }
 
-      String addMembersBy = groupDoc['AddMembersBy'] ?? 'anyone';
-      List<String> admins =
-          (groupDoc['admins'] as List<dynamic>?)?.cast<String>() ?? [];
-      List<String> participants =
-          (groupDoc['participants'] as List<dynamic>?)?.cast<String>() ?? [];
+      final addMembersBy = groupDoc['AddMembersBy'] ?? 'anyone';
+      final admins = List<String>.from(groupDoc['admins'] ?? []);
+      final participants = List<String>.from(groupDoc['participants'] ?? []);
 
-      if (addMembersBy == 'admin only' && !admins.contains(currentUserEmail)) {
-        showSnackbar("You cannot add members, admin only.");
+      if (addMembersBy == 'admin only' &&
+          !admins.contains(currentUserEmail)) {
+        _snackBar('Only admins can add members.', isError: true);
         return;
       }
 
-      DocumentSnapshot contactsDoc =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(currentUserEmail)
-              .collection('contacts')
-              .doc('savedContacts')
-              .get();
+      final contactsDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUserEmail)
+          .collection('contacts')
+          .doc('savedContacts')
+          .get();
 
-      if (!contactsDoc.exists ||
-          contactsDoc['contactEmails'] == null ||
-          (contactsDoc['contactEmails'] as List<dynamic>).isEmpty) {
-        showSnackbar("You haven't any contacts to add in the group.");
+      final contactEmails = List<String>.from(
+          contactsDoc.data()?['contactEmails'] ?? []);
+
+      if (contactEmails.isEmpty) {
+        _snackBar('You have no saved contacts to add.', isError: true);
         return;
       }
 
-      List<String> contactEmails =
-          (contactsDoc['contactEmails'] as List<dynamic>).cast<String>();
+      final userQuery = await FirebaseFirestore.instance
+          .collection('users')
+          .where(FieldPath.documentId, whereIn: contactEmails)
+          .get();
 
-      QuerySnapshot userQuery =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .where(FieldPath.documentId, whereIn: contactEmails)
-              .get();
-
-      List<Map<String, dynamic>> userList =
-          userQuery.docs.map((doc) {
-            return {
-              'email': doc.id,
-              'username': doc['username'] ?? 'Unknown User',
-              'profilePic': doc['profilePic'] ?? '',
-              'isSelected': participants.contains(doc.id),
-            };
+      final userList = userQuery.docs.map((doc) => {
+            'email': doc.id,
+            'username': doc['username'] ?? 'Unknown',
+            'profilePic': doc['profilePic'] ?? '',
+            'isSelected': participants.contains(doc.id),
           }).toList();
 
-      // Then use it like this:
-      List<Map<String, dynamic>> processedList = await Future.wait(
-        userList.map((user) async {
-          final isBlocked = await _isBlocked(user['email']);
-          return {...user, 'isBlocked': isBlocked};
-        }).toList(),
+      final processed = await Future.wait(
+        userList.map((u) async => {
+              ...u,
+              'isBlocked': await _isBlocked(u['email'] as String),
+            }),
       );
 
-      // showModalBottomSheet<bool>(
-      //   context: context,
-      //   isScrollControlled: true,
-      //   builder: (BuildContext context) {
-      //     return AddParticipantsSheet(
-      //       userList: userList,
-      //       onSave: (selectedEmails, deselectedEmails) async {
-
-      bool isUpdated =
-          await showModalBottomSheet<bool>(
-            context: context,
-            isScrollControlled: true,
-            builder: (BuildContext context) {
-              return AddParticipantsSheet(
-                userList: processedList,
-                onSave: (selectedEmails, deselectedEmails) async {
-                  await FirebaseFirestore.instance
-                      .collection('groupChats')
-                      .doc(widget.chatId)
-                      .update({
-                        'participants': FieldValue.arrayUnion(selectedEmails),
-                      });
-
-                  await FirebaseFirestore.instance
-                      .collection('groupChats')
-                      .doc(widget.chatId)
-                      .update({
-                        'participants': FieldValue.arrayRemove(
-                          deselectedEmails,
-                        ),
-                        'admins': FieldValue.arrayRemove(deselectedEmails),
-                      });
-
-                  showSnackbar("Participants updated successfully.");
-                },
-              );
-            },
-          ) ??
-          false;
-
-      if (isUpdated) {
-        setState(() {});
-      }
-    } catch (e) {
-      showSnackbar("Error: $e");
-    }
-  }
-
-  void showProfilePicture(String? photoUrl, String userName) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => Dialog(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                photoUrl != null && photoUrl.isNotEmpty
-                    ? Image.network(photoUrl)
-                    : const Icon(Icons.person, size: 100),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(userName, style: const TextStyle(fontSize: 20)),
-                ),
-              ],
-            ),
-          ),
-    );
-  }
-
-  Future<void> deleteCurrentUser(String email) async {
-    bool? confirmation = await showDialog<bool>(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text("Confirm Deletion"),
-            content: Text(
-              "Are you sure you want to delete $email from the group?",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text("Cancel"),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text("Delete"),
-              ),
-            ],
-          ),
-    );
-
-    if (confirmation == true) {
-      try {
-        var groupDoc = FirebaseFirestore.instance
-            .collection('groupChats')
-            .doc(widget.chatId);
-
-        DocumentSnapshot groupData = await groupDoc.get();
-
-        if (!groupData.exists) {
-          showSnackbar("Group document does not exist.");
-          return;
-        }
-
-        List<dynamic> admins = List<dynamic>.from(groupData['admins'] ?? []);
-        List<dynamic> participants = List<dynamic>.from(
-          groupData['participants'] ?? [],
-        );
-
-        bool adminRemoved = admins.remove(email);
-        bool participantRemoved = participants.remove(email);
-
-        if (!adminRemoved && !participantRemoved) {
-          showSnackbar("Email not found in admins or participants.");
-          return;
-        }
-
-        await groupDoc.update({'admins': admins, 'participants': participants});
-        showSnackbar("User removed successfully.");
-
-        if (!mounted) return;
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const ChatListScreen()),
-        );
-      } catch (e) {
-        showSnackbar("Error removing user: $e");
-      }
-    }
-  }
-
-  Future<void> deleteUser(String email) async {
-    bool? confirmation = await showDialog<bool>(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text("Confirm Deletion"),
-            content: Text(
-              "Are you sure you want to delete $email from the group?",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text("Cancel"),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text("Delete"),
-              ),
-            ],
-          ),
-    );
-
-    if (confirmation == true) {
-      var groupDoc = FirebaseFirestore.instance
-          .collection('groupChats')
-          .doc(widget.chatId);
-      DocumentSnapshot groupData = await groupDoc.get();
-
-      List<String> admins = List<String>.from(groupData['admins'] ?? []);
-      List<String> participants = List<String>.from(
-        groupData['participants'] ?? [],
-      );
-
-      if (admins.contains(email)) admins.remove(email);
-      if (participants.contains(email)) participants.remove(email);
-
-      await groupDoc.update({'admins': admins, 'participants': participants});
-      setState(() {});
-    }
-  }
-
-  Future<void> makeAdmin(String email) async {
-    bool? confirmation = await showDialog<bool>(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text("Make Admin"),
-            content: Text("Are you sure you want to make $email an admin?"),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text("Cancel"),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text("Confirm"),
-              ),
-            ],
-          ),
-    );
-
-    if (confirmation == true) {
-      var groupDoc = FirebaseFirestore.instance
-          .collection('groupChats')
-          .doc(widget.chatId);
-      DocumentSnapshot groupData = await groupDoc.get();
-
-      List<String> admins = List<String>.from(groupData['admins'] ?? []);
-
-      if (!admins.contains(email)) {
-        admins.add(email);
-        await groupDoc.update({'admins': admins});
-        setState(() {});
-      } else {
-        showSnackbar("$email is already an admin.");
-      }
-    }
-  }
-
-  Future<void> removeAdmin(String email) async {
-    bool? confirmation = await showDialog<bool>(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text("Remove Admin"),
-            content: Text("Are you sure you want to remove $email as admin?"),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text("Cancel"),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text("Confirm"),
-              ),
-            ],
-          ),
-    );
-
-    if (confirmation == true) {
-      var groupDoc = FirebaseFirestore.instance
-          .collection('groupChats')
-          .doc(widget.chatId);
-      DocumentSnapshot groupData = await groupDoc.get();
-
-      List<String> admins = List<String>.from(groupData['admins'] ?? []);
-
-      if (admins.contains(email)) {
-        admins.remove(email);
-        await groupDoc.update({'admins': admins});
-        setState(() {});
-      } else {
-        showSnackbar("$email is not an admin.");
-      }
-    }
-  }
-
-  Future<void> createChatWithUser(String email) async {
-    String chatId = await createChat(currentUserEmail!, email);
-    if (chatId.isNotEmpty) {
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const ChatListScreen()),
+
+      await showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => AddParticipantsSheet(
+          userList: processed,
+          onSave: (selected, deselected) async {
+            await FirebaseFirestore.instance
+                .collection('groupChats')
+                .doc(widget.chatId)
+                .update({
+              'participants': FieldValue.arrayUnion(selected),
+            });
+            await FirebaseFirestore.instance
+                .collection('groupChats')
+                .doc(widget.chatId)
+                .update({
+              'participants': FieldValue.arrayRemove(deselected),
+              'admins': FieldValue.arrayRemove(deselected),
+            });
+            _snackBar('Participants updated');
+            setState(() {});
+          },
+        ),
       );
-    } else {
-      showSnackbar("Failed to create chat");
+    } catch (e) {
+      _snackBar('Error: $e', isError: true);
     }
   }
 
-  Future<String> createChat(String email1, String email2) async {
-    try {
-      var chatSnapshot =
-          await FirebaseFirestore.instance
-              .collection('chats')
-              .where('participants', arrayContains: email1)
-              .get();
+  Future<void> _deleteUser(String email) async {
+    final confirmed = await _confirm(
+      'Remove Participant',
+      'Remove $email from the group?',
+      confirmLabel: 'Remove',
+    );
+    if (confirmed != true) return;
 
-      QueryDocumentSnapshot<Map<String, dynamic>>? existingChatDoc;
+    final ref = FirebaseFirestore.instance
+        .collection('groupChats')
+        .doc(widget.chatId);
+    final doc = await ref.get();
+    final admins = List<String>.from(doc['admins'] ?? []);
+    final participants = List<String>.from(doc['participants'] ?? []);
+    admins.remove(email);
+    participants.remove(email);
+    await ref.update({'admins': admins, 'participants': participants});
+    _snackBar('User removed');
+    setState(() {});
+  }
+
+  Future<void> _deleteCurrentUser(String email) async {
+    final confirmed = await _confirm(
+      'Leave Group',
+      'Are you sure you want to leave this group?',
+      confirmLabel: 'Leave',
+    );
+    if (confirmed != true) return;
+
+    final ref = FirebaseFirestore.instance
+        .collection('groupChats')
+        .doc(widget.chatId);
+    final doc = await ref.get();
+    final admins = List<String>.from(doc['admins'] ?? []);
+    final participants = List<String>.from(doc['participants'] ?? []);
+    admins.remove(email);
+    participants.remove(email);
+    await ref.update({'admins': admins, 'participants': participants});
+
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const ChatListScreen()),
+    );
+  }
+
+  Future<void> _makeAdmin(String email) async {
+    final confirmed = await _confirm(
+      'Make Admin',
+      'Grant admin privileges to $email?',
+      confirmLabel: 'Make Admin',
+      confirmColor: Colors.green.shade700,
+    );
+    if (confirmed != true) return;
+
+    await FirebaseFirestore.instance
+        .collection('groupChats')
+        .doc(widget.chatId)
+        .update({'admins': FieldValue.arrayUnion([email])});
+    _snackBar('$email is now an admin');
+    setState(() {});
+  }
+
+  Future<void> _removeAdmin(String email) async {
+    final confirmed = await _confirm(
+      'Remove Admin',
+      'Revoke admin privileges from $email?',
+      confirmLabel: 'Remove',
+      confirmColor: Colors.orange.shade700,
+    );
+    if (confirmed != true) return;
+
+    await FirebaseFirestore.instance
+        .collection('groupChats')
+        .doc(widget.chatId)
+        .update({'admins': FieldValue.arrayRemove([email])});
+    _snackBar('Admin privileges removed');
+    setState(() {});
+  }
+
+  Future<void> _createChatWithUser(String email) async {
+    try {
+      final chatSnapshot = await FirebaseFirestore.instance
+          .collection('chats')
+          .where('participants', arrayContains: currentUserEmail)
+          .get();
+
+      String chatId = '';
       for (var doc in chatSnapshot.docs) {
-        var participants = doc['participants'] as List<dynamic>;
-        if (participants.contains(email2) && participants.length == 2) {
-          existingChatDoc = doc;
+        final participants = doc['participants'] as List;
+        if (participants.contains(email) && participants.length == 2) {
+          chatId = doc.id;
+          final deletedBy = doc['deletedBy'] as List? ?? [];
+          if (deletedBy.contains(currentUserEmail)) {
+            await FirebaseFirestore.instance
+                .collection('chats')
+                .doc(doc.id)
+                .update({'deletedBy': FieldValue.arrayRemove([currentUserEmail])});
+          }
           break;
         }
       }
 
-      if (existingChatDoc == null) {
-        DocumentReference chatRef = await FirebaseFirestore.instance
-            .collection('chats')
-            .add({
-              'participants': [email1, email2],
-              'lastMessage': '',
-              'chatType': 'individual',
-              'timestamp': FieldValue.serverTimestamp(),
-              'deletedBy': [],
-            });
-        return chatRef.id;
-      } else {
-        List<dynamic> deletedBy = existingChatDoc['deletedBy'] ?? [];
-        if (deletedBy.contains(currentUserEmail!)) {
-          await FirebaseFirestore.instance
-              .collection('chats')
-              .doc(existingChatDoc.id)
-              .update({
-                'deletedBy': FieldValue.arrayRemove([currentUserEmail!]),
-              });
-        }
-        return existingChatDoc.id;
+      if (chatId.isEmpty) {
+        final ref = await FirebaseFirestore.instance.collection('chats').add({
+          'participants': [currentUserEmail, email],
+          'lastMessage': '',
+          'chatType': 'individual',
+          'timestamp': FieldValue.serverTimestamp(),
+          'deletedBy': [],
+        });
+        chatId = ref.id;
       }
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const ChatListScreen()),
+      );
     } catch (e) {
-      showSnackbar("Error creating chat: $e");
-      return "";
+      _snackBar('Failed to open chat: $e', isError: true);
     }
   }
 
-  void showOptionsBottomSheet(
-    BuildContext context,
-    String email,
-    bool isAdmin,
-    bool isCurrentUser,
-    bool isCurrentUserAdmin,
-  ) {
+  void _showOptionsSheet(BuildContext context, String email, bool isAdmin,
+      bool isCurrentUser, bool isCurrentUserAdmin) {
     showModalBottomSheet(
       context: context,
-      builder:
-          (context) => ParticipantOptionsSheet(
-            email: email,
-            isAdmin: isAdmin,
-            isCurrentUser: isCurrentUser,
-            isCurrentUserAdmin: isCurrentUserAdmin,
-            onMessagePressed: () {
-              Navigator.pop(context);
-              createChatWithUser(email);
-            },
-            onRemoveAdminPressed: () {
-              Navigator.pop(context);
-              removeAdmin(email);
-            },
-            onMakeAdminPressed: () {
-              Navigator.pop(context);
-              makeAdmin(email);
-            },
-            onDeletePressed: () {
-              Navigator.pop(context);
-              deleteUser(email);
-            },
-            onRemoveSelfPressed: () {
-              Navigator.pop(context);
-              deleteCurrentUser(currentUserEmail!);
-            },
-          ),
+      backgroundColor: Colors.transparent,
+      builder: (_) => ParticipantOptionsSheet(
+        email: email,
+        isAdmin: isAdmin,
+        isCurrentUser: isCurrentUser,
+        isCurrentUserAdmin: isCurrentUserAdmin,
+        onMessagePressed: () {
+          Navigator.pop(context);
+          _createChatWithUser(email);
+        },
+        onRemoveAdminPressed: () {
+          Navigator.pop(context);
+          _removeAdmin(email);
+        },
+        onMakeAdminPressed: () {
+          Navigator.pop(context);
+          _makeAdmin(email);
+        },
+        onDeletePressed: () {
+          Navigator.pop(context);
+          _deleteUser(email);
+        },
+        onRemoveSelfPressed: () {
+          Navigator.pop(context);
+          _deleteCurrentUser(currentUserEmail!);
+        },
+      ),
     );
   }
 
-  void _viewImage(BuildContext context) {
+  void _viewPhoto(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) {
-        return Dialog(
-          child: SizedBox(
-            width: double.infinity,
-            height: double.infinity,
-            child: Image.network(widget.groupPhotoUrl!),
-          ),
-        );
-      },
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Image.network(widget.groupPhotoUrl!),
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDarkMode = theme.brightness == Brightness.dark;
-    final cardColor = isDarkMode ? Colors.grey[800] : Colors.grey[50];
+    if (currentUserEmail == null) {
+      return const Scaffold(
+        body: Center(
+            child: CircularProgressIndicator(
+                color: Color(0xFF1565C0), strokeWidth: 2.5)),
+      );
+    }
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF0F4F8),
       appBar: const GroupDetailsAppBar(),
-      body:
-          currentUserEmail == null
-              ? const Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.0,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-                ),
-              )
-              : FutureBuilder<DocumentSnapshot>(
-                future:
-                    FirebaseFirestore.instance
-                        .collection('groupChats')
-                        .doc(widget.chatId)
-                        .get(),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.0,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          theme.colorScheme.primary,
-                        ),
-                      ),
-                    );
-                  }
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('groupChats')
+            .doc(widget.chatId)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(
+              child: CircularProgressIndicator(
+                  color: Color(0xFF1565C0), strokeWidth: 2.5),
+            );
+          }
 
-                  var groupData = snapshot.data!;
-                  List<String> admins = List<String>.from(
-                    groupData['admins'] ?? [],
-                  );
-                  List<String> participants = List<String>.from(
-                    groupData['participants'] ?? [],
-                  );
+          final groupData = snapshot.data!;
+          final admins = List<String>.from(groupData['admins'] ?? []);
+          final participants =
+              List<String>.from(groupData['participants'] ?? []);
+          final isCurrentUserAdmin = admins.contains(currentUserEmail);
 
-                  Set<String> allUsers = {
-                    currentUserEmail!,
-                    ...admins,
-                    ...participants,
-                  };
+          final sortedParticipants = [
+            if (participants.contains(currentUserEmail)) currentUserEmail!,
+            ...admins.where((e) => e != currentUserEmail),
+            ...participants.where(
+                (e) => e != currentUserEmail && !admins.contains(e)),
+          ];
 
-                  return FutureBuilder<QuerySnapshot>(
-                    future:
-                        FirebaseFirestore.instance
-                            .collection('users')
-                            .where(
-                              FieldPath.documentId,
-                              whereIn: allUsers.toList(),
-                            )
-                            .get(),
-                    builder: (context, userSnapshot) {
-                      if (!userSnapshot.hasData) {
-                        return Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.0,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              theme.colorScheme.primary,
+          return FutureBuilder<QuerySnapshot>(
+            future: FirebaseFirestore.instance
+                .collection('users')
+                .where(FieldPath.documentId,
+                    whereIn: sortedParticipants.isEmpty
+                        ? ['_']
+                        : sortedParticipants)
+                .get(),
+            builder: (context, userSnap) {
+              final userMap = userSnap.hasData
+                  ? {
+                      for (var doc in userSnap.data!.docs)
+                        doc.id: doc.data() as Map<String, dynamic>
+                    }
+                  : <String, Map<String, dynamic>>{};
+
+              return CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  // Group header banner
+                  SliverToBoxAdapter(
+                    child: GroupInfoHeader(
+                      groupName: widget.groupName,
+                      groupPhotoUrl: widget.groupPhotoUrl,
+                      onPhotoTap: () {
+                        if (widget.groupPhotoUrl?.isNotEmpty == true) {
+                          _viewPhoto(context);
+                        }
+                      },
+                    ),
+                  ),
+
+                  const SliverToBoxAdapter(child: SizedBox(height: 20)),
+
+                  // Section header
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    sliver: SliverToBoxAdapter(
+                      child: Row(
+                        children: [
+                          const Text(
+                            'Participants',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                              color: Color(0xFF1A1A2E),
                             ),
                           ),
-                        );
-                      }
-
-                      Map<String, dynamic> userMap = {
-                        for (var doc in userSnapshot.data!.docs)
-                          doc.id: doc.data(),
-                      };
-
-                      List<String> sortedParticipants = [
-                        currentUserEmail!,
-                        ...admins.where((email) => email != currentUserEmail),
-                        ...participants.where(
-                          (email) =>
-                              email != currentUserEmail &&
-                              !admins.contains(email),
-                        ),
-                      ];
-
-                      return CustomScrollView(
-                        slivers: [
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: GroupInfoHeader(
-                                groupName: widget.groupName,
-                                groupPhotoUrl: widget.groupPhotoUrl,
-                                onPhotoTap: () {
-                                  if (widget.groupPhotoUrl != null &&
-                                      widget.groupPhotoUrl!.isNotEmpty) {
-                                    _viewImage(context);
-                                  }
-                                },
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1565C0).withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '${sortedParticipants.length}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF1565C0),
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ),
-                          SliverPadding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16.0,
-                            ),
-                            sliver: SliverToBoxAdapter(
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                          const Spacer(),
+                          GestureDetector(
+                            onTap: _addParticipants,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1565C0),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
+                                  Icon(Icons.person_add_rounded,
+                                      size: 14, color: Colors.white),
+                                  SizedBox(width: 5),
                                   Text(
-                                    "Participants",
-                                    style: theme.textTheme.titleMedium
-                                        ?.copyWith(fontWeight: FontWeight.w600),
-                                  ),
-                                  IconButton(
-                                    icon: Container(
-                                      width: 36,
-                                      height: 36,
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.primary
-                                            .withOpacity(0.1),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        Icons.add,
-                                        color: theme.colorScheme.primary,
-                                        size: 20,
-                                      ),
+                                    'Add',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
                                     ),
-                                    onPressed: _addParticipantsToThisGroups,
                                   ),
                                 ],
                               ),
                             ),
                           ),
-                          SliverPadding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16.0,
-                            ),
-                            sliver: SliverList(
-                              delegate: SliverChildBuilderDelegate((
-                                context,
-                                index,
-                              ) {
-                                String email = sortedParticipants[index];
-                                var userData = userMap[email] ?? {};
-
-                                return Container(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  decoration: BoxDecoration(
-                                    color: cardColor,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: ParticipantListItem(
-                                    userName:
-                                        userData['username'] ?? 'Unknown User',
-                                    email: email,
-                                    userPhotoUrl: userData['profilePic'] ?? '',
-                                    isAdmin: admins.contains(email),
-                                    isCurrentUser: email == currentUserEmail,
-                                    onTap:
-                                        () => showProfilePicture(
-                                          userData['profilePic'],
-                                          userData['username'] ??
-                                              'Unknown User',
-                                        ),
-                                    onLongPress: () async {
-                                      currentUserIsAdmin =
-                                          await checkIfCurrentUserIsAdmin(
-                                            currentUserEmail!,
-                                          );
-                                      // Before showing the sheet, check for blocked users
-                                      showOptionsBottomSheet(
-                                        context,
-                                        email,
-                                        admins.contains(email),
-                                        email == currentUserEmail,
-                                        currentUserIsAdmin,
-                                      );
-                                    },
-                                  ),
-                                );
-                              }, childCount: sortedParticipants.length),
-                            ),
-                          ),
-                          const SliverPadding(
-                            padding: EdgeInsets.only(bottom: 16),
-                          ),
                         ],
-                      );
-                    },
-                  );
-                },
-              ),
+                      ),
+                    ),
+                  ),
+
+                  const SliverToBoxAdapter(child: SizedBox(height: 10)),
+
+                  // Participants list
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final email = sortedParticipants[index];
+                          final userData = userMap[email] ?? {};
+                          final isAdmin = admins.contains(email);
+                          final isCurrentUser = email == currentUserEmail;
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.04),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: ParticipantListItem(
+                              userName: userData['username'] ?? 'Unknown',
+                              email: email,
+                              userPhotoUrl: userData['profilePic'] ?? '',
+                              isAdmin: isAdmin,
+                              isCurrentUser: isCurrentUser,
+                              onTap: () {
+                                // View profile photo
+                                final photoUrl =
+                                    userData['profilePic'] as String? ?? '';
+                                if (photoUrl.isNotEmpty) {
+                                  showDialog(
+                                    context: context,
+                                    builder: (ctx) => Dialog(
+                                      backgroundColor: Colors.transparent,
+                                      child: ClipRRect(
+                                        borderRadius:
+                                            BorderRadius.circular(16),
+                                        child: Image.network(photoUrl),
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                              onLongPress: () async {
+                                final adminStatus =
+                                    await _checkIfAdmin(currentUserEmail!);
+                                if (!mounted) return;
+                                _showOptionsSheet(
+                                  context,
+                                  email,
+                                  isAdmin,
+                                  isCurrentUser,
+                                  adminStatus,
+                                );
+                              },
+                            ),
+                          );
+                        },
+                        childCount: sortedParticipants.length,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

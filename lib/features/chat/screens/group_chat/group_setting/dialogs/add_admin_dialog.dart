@@ -37,107 +37,155 @@ class _AddAdminDialogState extends State<AddAdminDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16.0),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Add Admin',
-              style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
+  // Modern shared dialog style — apply to AddAdminDialog & AddMemberDialog
+
+@override
+Widget build(BuildContext context) {
+  return Dialog(
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    elevation: 0,
+    backgroundColor: Colors.white,
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE3F2FD),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.admin_panel_settings, // or admin_panel_settings for admin
+                  color: Color(0xFF1565C0),
+                  size: 20,
+                ),
               ),
+              const SizedBox(width: 12),
+              const Text(
+                'Add Member', // or 'Add Member'
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1A1A2E),
+                  letterSpacing: -0.3,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          // Email field
+          TextField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            style: const TextStyle(fontSize: 15),
+            decoration: InputDecoration(
+              hintText: 'Enter email address',
+              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
+              filled: true,
+              fillColor: const Color(0xFFF5F7FA),
+              prefixIcon: const Icon(Icons.email_rounded,
+                  color: Color(0xFF1565C0), size: 20),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                    color: Color(0xFF1565C0), width: 1.5),
+              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
-            const SizedBox(height: 15),
-            TextField(
-              controller: _emailController,
-              style: GoogleFonts.poppins(),
-              decoration: InputDecoration(
-                labelText: 'Enter email',
-                labelStyle: GoogleFonts.poppins(color: Colors.grey),
-                filled: true,
-                fillColor: Colors.grey.shade200,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.0),
-                  borderSide: BorderSide.none,
-                ),
-                prefixIcon: const Icon(Icons.email, color: Colors.blueAccent),
-              ),
-            ),
-            if (_isChecking)
-              const Padding(
-                padding: EdgeInsets.only(top: 10),
-                child: CircularProgressIndicator(),
-              ),
-            if (_errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: Text(
-                  _errorMessage!,
-                  style: GoogleFonts.poppins(
-                    color: Colors.red,
-                    fontSize: 14,
-                  ),
+          ),
+          // Loading / Error
+          if (_isChecking) ...[
+            const SizedBox(height: 14),
+            const Center(
+              child: SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: Color(0xFF1565C0),
                 ),
               ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey.shade300,
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.0),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    child: Text(
-                      'Cancel',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16, 
-                        fontWeight: FontWeight.w500
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _handleSave,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.0),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    child: Text(
-                      'Save',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16, 
-                        fontWeight: FontWeight.w500
-                      ),
-                    ),
-                  ),
-                ),
-              ],
             ),
           ],
-        ),
+          if (_errorMessage != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFEBEE),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline_rounded,
+                      color: Color(0xFFD32F2F), size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(
+                          color: Color(0xFFD32F2F), fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 20),
+          // Buttons
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    side: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text('Cancel',
+                      style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontWeight: FontWeight.w600)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    backgroundColor: const Color(0xFF1565C0),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: _isChecking ? null : _handleSave,
+                  child: const Text('Add',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Future<void> _handleSave() async {
     final email = _emailController.text.trim();

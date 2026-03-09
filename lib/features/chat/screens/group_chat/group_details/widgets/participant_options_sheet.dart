@@ -26,146 +26,152 @@ class ParticipantOptionsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDarkMode = theme.brightness == Brightness.dark;
-    final cardColor = isDarkMode ? Colors.grey[800] : Colors.grey[50];
-
     return Container(
-      decoration: BoxDecoration(
-        color: isDarkMode ? Colors.grey[900] : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: const EdgeInsets.only(top: 8, bottom: 24),
+      padding: const EdgeInsets.fromLTRB(0, 8, 0, 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // Drag handle
           Container(
-            width: 48,
+            width: 36,
             height: 4,
-            margin: const EdgeInsets.only(bottom: 12),
+            margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
-              color: Colors.grey[400],
+              color: Colors.grey.shade300,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
+
           // Header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
             child: Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
-                  child: Icon(Icons.person, color: theme.colorScheme.primary),
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1565C0).withOpacity(0.08),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.person_rounded,
+                      color: Color(0xFF1565C0), size: 22),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isCurrentUser ? "Your Options" : "Participant Options",
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                        isCurrentUser ? 'Your Options' : 'Participant',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          color: Color(0xFF1A1A2E),
                         ),
                       ),
-                      if (!isCurrentUser) Text(
-                        email,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      if (!isCurrentUser)
+                        Text(
+                          email,
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey.shade500),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
                     ],
                   ),
                 ),
+                if (isAdmin)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFA000).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text(
+                      'Admin',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFFE65100),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          // Options
-          Flexible(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (isCurrentUser)
-                    _buildModernOptionTile(
-                      context,
-                      icon: Icons.logout_rounded,
-                      label: "Leave Group",
-                      description: "Remove yourself from this group",
-                      color: Colors.red,
-                      onTap: onRemoveSelfPressed,
-                    ),
-                  if (!isCurrentUser)
-                    _buildModernOptionTile(
-                      context,
-                      icon: Icons.message_rounded,
-                      label: "Send Message",
-                      description: "Start a private conversation",
-                      color: Colors.blue,
-                      onTap: onMessagePressed,
-                    ),
-                  if (!isCurrentUser && isCurrentUserAdmin && isAdmin)
-                    _buildModernOptionTile(
-                      context,
-                      icon: Icons.admin_panel_settings_rounded,
-                      label: "Remove Admin",
-                      description: "Revoke admin privileges",
-                      color: Colors.orange,
-                      onTap: onRemoveAdminPressed,
-                    ),
-                  if (!isCurrentUser && isCurrentUserAdmin && !isAdmin)
-                    _buildModernOptionTile(
-                      context,
-                      icon: Icons.admin_panel_settings_rounded,
-                      label: "Make Admin",
-                      description: "Grant admin privileges",
-                      color: Colors.green,
-                      onTap: onMakeAdminPressed,
-                    ),
-                  if (!isCurrentUser && isCurrentUserAdmin)
-                    _buildModernOptionTile(
-                      context,
-                      icon: Icons.person_remove_rounded,
-                      label: "Remove Participant",
-                      description: "Remove from this group",
-                      color: Colors.red,
-                      onTap: onDeletePressed,
-                    ),
-                ],
-              ),
+
+          const Divider(height: 1, indent: 20, endIndent: 20),
+          const SizedBox(height: 8),
+
+          // Actions
+          if (isCurrentUser)
+            _tile(
+              icon: Icons.logout_rounded,
+              label: 'Leave Group',
+              subtitle: 'Remove yourself from this group',
+              color: Colors.red,
+              onTap: onRemoveSelfPressed,
             ),
-          ),
-          const SizedBox(height: 16),
+
+          if (!isCurrentUser) ...[
+            _tile(
+              icon: Icons.message_rounded,
+              label: 'Send Message',
+              subtitle: 'Start a private conversation',
+              color: const Color(0xFF1565C0),
+              onTap: onMessagePressed,
+            ),
+            if (isCurrentUserAdmin && isAdmin)
+              _tile(
+                icon: Icons.remove_moderator_rounded,
+                label: 'Remove Admin',
+                subtitle: 'Revoke admin privileges',
+                color: Colors.orange.shade700,
+                onTap: onRemoveAdminPressed,
+              ),
+            if (isCurrentUserAdmin && !isAdmin)
+              _tile(
+                icon: Icons.admin_panel_settings_rounded,
+                label: 'Make Admin',
+                subtitle: 'Grant admin privileges',
+                color: Colors.green.shade700,
+                onTap: onMakeAdminPressed,
+              ),
+            if (isCurrentUserAdmin)
+              _tile(
+                icon: Icons.person_remove_rounded,
+                label: 'Remove from Group',
+                subtitle: 'Remove this participant',
+                color: Colors.red,
+                onTap: onDeletePressed,
+              ),
+          ],
+
+          const SizedBox(height: 8),
         ],
       ),
     );
   }
 
-  Widget _buildModernOptionTile(
-    BuildContext context, {
+  Widget _tile({
     required IconData icon,
     required String label,
-    required String description,
+    required String subtitle,
     required Color color,
     required VoidCallback onTap,
   }) {
-    final theme = Theme.of(context);
-    
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           child: Row(
             children: [
               Container(
@@ -177,31 +183,32 @@ class ParticipantOptionsSheet extends StatelessWidget {
                 ),
                 child: Icon(icon, color: color, size: 20),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       label,
-                      style: theme.textTheme.bodyMedium?.copyWith(
+                      style: TextStyle(
+                        fontSize: 14.5,
                         fontWeight: FontWeight.w600,
+                        color: label.contains('Remove') ||
+                                label.contains('Leave')
+                            ? const Color(0xFFE53935)
+                            : const Color(0xFF1A1A2E),
                       ),
                     ),
-                    const SizedBox(height: 2),
                     Text(
-                      description,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
-                      ),
+                      subtitle,
+                      style: TextStyle(
+                          fontSize: 12, color: Colors.grey.shade500),
                     ),
                   ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: theme.colorScheme.onSurface.withOpacity(0.3),
-              ),
+              Icon(Icons.chevron_right_rounded,
+                  color: Colors.grey.shade300, size: 20),
             ],
           ),
         ),

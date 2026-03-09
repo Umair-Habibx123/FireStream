@@ -16,53 +16,47 @@ class SettingsOptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = isDestructive ? const Color(0xFFD32F2F) : const Color(0xFF1565C0);
+    final bgColor = isDestructive
+        ? const Color(0xFFFFEBEE)
+        : const Color(0xFFE3F2FD);
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
         onTap: onTap,
-        splashColor: Colors.blueAccent.withOpacity(0.1),
-        highlightColor: Colors.blueAccent.withOpacity(0.05),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: Colors.grey.shade200,
-              width: 1,
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
+        splashColor: color.withOpacity(0.08),
+        highlightColor: color.withOpacity(0.04),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
           child: Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
-                  color: Colors.blueAccent.withOpacity(0.1),
-                  shape: BoxShape.circle,
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(
-                  icon,
-                  size: 20,
-                  color: Colors.blueAccent,
-                ),
+                child: Icon(icon, size: 19, color: color),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Expanded(
                 child: Text(
                   title,
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.w500,
-                    color: Colors.grey.shade800,
+                    color: isDestructive
+                        ? const Color(0xFFD32F2F)
+                        : const Color(0xFF1A1A2E),
                   ),
                 ),
               ),
               Icon(
-                Icons.chevron_right,
+                Icons.chevron_right_rounded,
                 size: 20,
-                color: Colors.grey.shade500,
+                color: Colors.grey.shade400,
               ),
             ],
           ),

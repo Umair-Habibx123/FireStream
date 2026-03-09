@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 
 class ConnectivityService with ChangeNotifier {
   bool _hasInternet = true;
-
   bool get hasInternet => _hasInternet;
 
   ConnectivityService() {
@@ -11,26 +10,18 @@ class ConnectivityService with ChangeNotifier {
   }
 
   Future<void> _init() async {
-    // Initial check
     await _checkConnectivity();
-    
-    // Listen for changes
-    Connectivity().onConnectivityChanged.listen((result) {
-      _checkConnectivity();
-    });
+    Connectivity().onConnectivityChanged.listen((_) => _checkConnectivity());
   }
 
   Future<void> _checkConnectivity() async {
-    var connectivityResult = await Connectivity().checkConnectivity();
-    var newStatus = !connectivityResult.contains(ConnectivityResult.none);
-    
+    final result = await Connectivity().checkConnectivity();
+    final newStatus = !result.contains(ConnectivityResult.none);
     if (newStatus != _hasInternet) {
       _hasInternet = newStatus;
       notifyListeners();
     }
   }
 
-  Future<void> retryConnection() async {
-    await _checkConnectivity();
-  }
+  Future<void> retryConnection() async => _checkConnectivity();
 }

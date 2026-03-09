@@ -38,16 +38,16 @@ class _UserDetailPageState extends State<UserDetailPage> {
 
   Future<bool> _isContactSaved(String email) async {
     try {
-      DocumentSnapshot savedContactsDoc =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(currentUserEmail)
-              .collection('contacts')
-              .doc('savedContacts')
-              .get();
+      DocumentSnapshot savedContactsDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUserEmail)
+          .collection('contacts')
+          .doc('savedContacts')
+          .get();
 
       if (savedContactsDoc.exists) {
-        List<dynamic> contactEmails = savedContactsDoc['contactEmails'] ?? [];
+        List<dynamic> contactEmails =
+            savedContactsDoc['contactEmails'] ?? [];
         return contactEmails.contains(email);
       }
       return false;
@@ -60,40 +60,81 @@ class _UserDetailPageState extends State<UserDetailPage> {
   Future<void> _addToContacts(BuildContext context) async {
     try {
       setState(() {});
-
       DocumentReference userDocRef = FirebaseFirestore.instance
           .collection('users')
           .doc(currentUserEmail);
 
-      var contactsDoc =
-          await userDocRef.collection('contacts').doc('savedContacts').get();
+      var contactsDoc = await userDocRef
+          .collection('contacts')
+          .doc('savedContacts')
+          .get();
 
       if (!contactsDoc.exists) {
-        await userDocRef.collection('contacts').doc('savedContacts').set({
-          'contactEmails': [],
-        });
+        await userDocRef
+            .collection('contacts')
+            .doc('savedContacts')
+            .set({'contactEmails': []});
       }
 
-      await userDocRef.collection('contacts').doc('savedContacts').update({
+      await userDocRef
+          .collection('contacts')
+          .doc('savedContacts')
+          .update({
         'contactEmails': FieldValue.arrayUnion([email]),
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("User added to your contacts.")),
-      );
-
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text("Added to contacts"),
+            backgroundColor: Colors.green.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
       setState(() {});
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to add contact: ${e.toString()}")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed: ${e.toString()}")),
+        );
+      }
     }
   }
 
   Future<void> _addToBlockList(BuildContext context) async {
+    // Confirm dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Block User',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+        content: Text('Are you sure you want to block $email?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Cancel',
+                style: TextStyle(color: Colors.grey.shade600)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Block',
+                style: TextStyle(
+                    color: Color(0xFFE53935),
+                    fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
     try {
       setState(() {});
-
       DocumentReference userDocRef = FirebaseFirestore.instance
           .collection('users')
           .doc(currentUserEmail);
@@ -102,20 +143,20 @@ class _UserDetailPageState extends State<UserDetailPage> {
           await userDocRef.collection('contacts').doc('blockList').get();
 
       if (!contactsDoc.exists) {
-        await userDocRef.collection('contacts').doc('blockList').set({
-          'contactEmails': [],
-        });
+        await userDocRef
+            .collection('contacts')
+            .doc('blockList')
+            .set({'contactEmails': []});
       }
 
       await userDocRef.collection('contacts').doc('blockList').update({
         'contactEmails': FieldValue.arrayUnion([email]),
       });
 
-      var chatSnapshot =
-          await FirebaseFirestore.instance
-              .collection('chats')
-              .where('participants', arrayContains: currentUserEmail)
-              .get();
+      var chatSnapshot = await FirebaseFirestore.instance
+          .collection('chats')
+          .where('participants', arrayContains: currentUserEmail)
+          .get();
 
       for (var doc in chatSnapshot.docs) {
         var participants = List<String>.from(doc['participants']);
@@ -128,21 +169,19 @@ class _UserDetailPageState extends State<UserDetailPage> {
         }
       }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("User added to blacklist.")));
-
       setState(() {});
 
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const ChatListScreen()),
-      );
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const ChatListScreen()),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Failed to adding in blacklist: ${e.toString()}"),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed: ${e.toString()}")),
+        );
+      }
     }
   }
 
@@ -167,90 +206,127 @@ class _UserDetailPageState extends State<UserDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF7F8FC),
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.arrow_back_ios_rounded,
+                color: Colors.white, size: 18),
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: const Text(
-          "User Profile",
+          'Profile',
           style: TextStyle(
             color: Colors.white,
-            fontWeight: FontWeight.w600,
-            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
           ),
         ),
-        backgroundColor: Colors.blueAccent,
-        iconTheme: const IconThemeData(color: Colors.white),
-        elevation: 0,
         centerTitle: true,
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.blue.shade50, Colors.white],
+        actions: [
+          IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.more_vert_rounded,
+                  color: Colors.white, size: 18),
+            ),
+            onPressed: () {},
           ),
-        ),
-        child: FutureBuilder<Map<String, dynamic>?>(
-          future: _fetchUserDetails(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(
-                child: CircularProgressIndicator.adaptive(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blueAccent),
-                ),
-              );
-            }
-            if (!snapshot.hasData || snapshot.data == null) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.person_off_rounded,
-                      size: 48,
-                      color: Colors.grey.shade400,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      "User not found",
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.grey.shade600,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            final userDetails = snapshot.data!;
-            return SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
+          const SizedBox(width: 4),
+        ],
+      ),
+      body: FutureBuilder<Map<String, dynamic>?>(
+        future: _fetchUserDetails(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(
+                color: Color(0xFF1565C0),
+                strokeWidth: 2.5,
+              ),
+            );
+          }
+          if (!snapshot.hasData || snapshot.data == null) {
+            return Center(
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 24),
-                  UserInfoCard(
-                    profileUrl: userDetails['profilePic'] ?? "",
-                    username: userDetails['username'] ?? "Unknown User",
-                    email: email,
-                    onImageTap: (url) => _viewImage(context, url),
+                  Icon(Icons.person_off_rounded,
+                      size: 56, color: Colors.grey.shade300),
+                  const SizedBox(height: 16),
+                  Text(
+                    'User not found',
+                    style: TextStyle(
+                      fontSize: 17,
+                      color: Colors.grey.shade500,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                  const SizedBox(height: 24),
-                  ActionButtons(
-                    email: email,
-                    currentUserEmail: currentUserEmail,
-                    onAddToContacts: () => _addToContacts(context),
-                    onAddToBlockList: () => _addToBlockList(context),
-                    onAddToGroup: () => _showAddToGroupDialog(context),
-                    isContactSavedFuture: _isContactSaved(email),
-                  ),
-                  const SizedBox(height: 24),
                 ],
               ),
             );
-          },
-        ),
+          }
+
+          final userDetails = snapshot.data!;
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              children: [
+                // Header card (full-width gradient, extends behind appbar)
+                UserInfoCard(
+                  profileUrl: userDetails['profilePic'] ?? "",
+                  username: userDetails['username'] ?? "Unknown User",
+                  email: email,
+                  onImageTap: (url) => _viewImage(context, url),
+                ),
+
+                // Action buttons
+                Transform.translate(
+                  offset: const Offset(0, -12),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.06),
+                            blurRadius: 20,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(16),
+                      child: ActionButtons(
+                        email: email,
+                        currentUserEmail: currentUserEmail,
+                        onAddToContacts: () => _addToContacts(context),
+                        onAddToBlockList: () => _addToBlockList(context),
+                        onAddToGroup: () => _showAddToGroupDialog(context),
+                        isContactSavedFuture: _isContactSaved(email),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -258,74 +334,55 @@ class _UserDetailPageState extends State<UserDetailPage> {
   void _viewImage(BuildContext context, String imageUrl) {
     showDialog(
       context: context,
-      builder: (context) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.all(20),
-          child: Stack(
-            children: [
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Center(
-                  child: Hero(
-                    tag: 'profile-image',
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        imageUrl,
-                        fit: BoxFit.contain,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Container(
-                            width: 300,
-                            height: 300,
-                            color: Colors.black.withOpacity(0.7),
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                value:
-                                    loadingProgress.expectedTotalBytes != null
-                                        ? loadingProgress
-                                                .cumulativeBytesLoaded /
-                                            (loadingProgress
-                                                    .expectedTotalBytes ??
-                                                1)
-                                        : null,
-                                color: Colors.white,
-                              ),
-                            ),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 300,
-                            height: 300,
-                            color: Colors.black.withOpacity(0.7),
-                            child: const Center(
-                              child: Icon(
-                                Icons.person,
-                                size: 80,
-                                color: Colors.white,
-                              ),
-                            ),
-                          );
-                        },
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(20),
+        child: Stack(
+          children: [
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Center(
+                child: Hero(
+                  tag: 'profile-image',
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.network(
+                      imageUrl,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 300,
+                        height: 300,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.7),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Icon(Icons.person,
+                            size: 80, color: Colors.white),
                       ),
                     ),
                   ),
                 ),
               ),
-              Positioned(
-                top: 20,
-                right: 20,
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white, size: 28),
-                  onPressed: () => Navigator.pop(context),
+            ),
+            Positioned(
+              top: 0,
+              right: 0,
+              child: IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close_rounded,
+                      color: Colors.white, size: 20),
                 ),
+                onPressed: () => Navigator.pop(context),
               ),
-            ],
-          ),
-        );
-      },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -333,34 +390,33 @@ class _UserDetailPageState extends State<UserDetailPage> {
     final eligibleGroups = await _fetchEligibleGroups();
 
     if (eligibleGroups.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text("No eligible groups available"),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text("No eligible groups available"),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
           ),
-          margin: const EdgeInsets.all(16),
-        ),
-      );
+        );
+      }
       return;
     }
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (_) => Dialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          backgroundColor: Colors.white,
+              borderRadius: BorderRadius.circular(20)),
           child: GroupSelectionDialog(
             eligibleGroups: eligibleGroups,
             email: email,
             currentUserEmail: currentUserEmail,
           ),
-        );
-      },
-    );
+        ),
+      );
+    }
   }
 }

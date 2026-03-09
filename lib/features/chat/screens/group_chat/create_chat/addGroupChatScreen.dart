@@ -14,311 +14,327 @@ class AddGroupChatScreen extends StatefulWidget {
 
 class _AddGroupChatScreenState extends State<AddGroupChatScreen> {
   final TextEditingController _groupNameController = TextEditingController();
+  final FocusNode _nameFocus = FocusNode();
   String _currentUserEmail = "";
   File? _groupPhoto;
   final ImagePicker _picker = ImagePicker();
-  bool _isLoading = false; // Loading state variable
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _loadCurrentUserEmail();
+    _nameFocus.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
     _groupNameController.dispose();
+    _nameFocus.dispose();
     super.dispose();
   }
 
   Future<void> _loadCurrentUserEmail() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _currentUserEmail = prefs.getString('userEmail') ?? '';
-    });
+    final prefs = await SharedPreferences.getInstance();
+    setState(() => _currentUserEmail = prefs.getString('userEmail') ?? '');
   }
 
   Future<void> _pickGroupPhoto() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
-      setState(() {
-        _groupPhoto = File(pickedFile.path);
-      });
+      setState(() => _groupPhoto = File(pickedFile.path));
     }
   }
 
   Future<void> _createGroupChat() async {
-    String groupName = _groupNameController.text.trim();
+    final groupName = _groupNameController.text.trim();
     if (groupName.isEmpty) {
-      setState(() {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Group name is mandatory')),
-        );
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please enter a group name'),
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
       return;
     }
 
-    setState(() {
-      _isLoading = true; // Set loading to true
-    });
+    setState(() => _isLoading = true);
 
     try {
-      // Create the group chat
-      DocumentReference chatRef = await FirebaseFirestore.instance
-          .collection('groupChats')
-          .add({
-            'groupName': groupName,
-            'isGroup': true,
-            'chatType': 'group',
-            'SettingOnlyAdmin': true,
-            'MessagesOnlyAdmin': false,
-            'AddMembersBy': 'anyone',
-            'groupPhotoUrl': '', // Placeholder for photo URL
-            'participants': [_currentUserEmail],
-            'createdBy': _currentUserEmail,
-            'admins': [_currentUserEmail],
-            'createdDate': FieldValue.serverTimestamp(),
-          });
+      final chatRef =
+          await FirebaseFirestore.instance.collection('groupChats').add({
+        'groupName': groupName,
+        'isGroup': true,
+        'chatType': 'group',
+        'SettingOnlyAdmin': true,
+        'MessagesOnlyAdmin': false,
+        'AddMembersBy': 'anyone',
+        'groupPhotoUrl': '',
+        'participants': [_currentUserEmail],
+        'createdBy': _currentUserEmail,
+        'admins': [_currentUserEmail],
+        'createdDate': FieldValue.serverTimestamp(),
+      });
 
-      // If a group photo is selected, upload it and update the chat with the photo URL
       if (_groupPhoto != null) {
-        String photoUrl = await _uploadGroupPhoto(chatRef.id);
+        final photoUrl = await _uploadGroupPhoto(chatRef.id);
         await chatRef.update({'groupPhotoUrl': photoUrl});
       }
 
-      Navigator.of(context).pop();
+      if (mounted) Navigator.of(context).pop();
     } catch (e) {
-      // Handle errors here
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error creating group: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error creating group: $e'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red.shade600,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
     } finally {
-      setState(() {
-        _isLoading = false; // Set loading to false
-      });
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<String> _uploadGroupPhoto(String chatId) async {
-    // Create a unique file name for the image
-    String fileName =
-        'group_profile_pictures/$chatId/${DateTime.now().millisecondsSinceEpoch}.png';
-
-    // Upload the image to Firebase Storage
     try {
+      final fileName =
+          'group_profile_pictures/$chatId/${DateTime.now().millisecondsSinceEpoch}.png';
       await FirebaseStorage.instance.ref(fileName).putFile(_groupPhoto!);
-
-      // Get the download URL
-      String downloadUrl =
-          await FirebaseStorage.instance.ref(fileName).getDownloadURL();
-      return downloadUrl; // Return the download URL
+      return await FirebaseStorage.instance.ref(fileName).getDownloadURL();
     } catch (e) {
-      print("Error uploading photo: $e");
-      return ''; // Return an empty string if upload fails
+      debugPrint('Error uploading photo: $e');
+      return '';
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF0F4F8),
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_rounded,
+              color: Colors.white, size: 20),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: const Text(
-          "New Group",
+          'New Group',
           style: TextStyle(
             color: Colors.white,
-            fontWeight: FontWeight.w600,
-            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
           ),
         ),
-        backgroundColor: Colors.blueAccent,
-        iconTheme: const IconThemeData(color: Colors.white),
-        elevation: 0,
         centerTitle: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
-        ),
         flexibleSpace: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Colors.blueAccent, Colors.blue.shade700],
-            ),
-            borderRadius: const BorderRadius.vertical(
-              bottom: Radius.circular(12),
+              colors: [Color(0xFF1565C0), Color(0xFF1976D2)],
             ),
           ),
         ),
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.white, Colors.blue.shade50.withOpacity(0.3)],
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child:
-              _isLoading
-                  ? Center(
-                    child: CircularProgressIndicator.adaptive(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Colors.blueAccent,
-                      ),
-                    ),
-                  )
-                  : SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(
+                color: Color(0xFF1565C0),
+                strokeWidth: 2.5,
+              ),
+            )
+          : SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Avatar picker
+                  GestureDetector(
+                    onTap: _pickGroupPhoto,
+                    child: Stack(
                       children: [
-                        // Group name input
-                        Material(
-                          elevation: 0,
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.blue.shade100.withOpacity(0.2),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
+                        Container(
+                          width: 110,
+                          height: 110,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.blue.shade50,
+                            border: Border.all(
+                              color: const Color(0xFF1565C0).withOpacity(0.3),
+                              width: 2.5,
                             ),
-                            padding: const EdgeInsets.all(20),
-                            child: TextField(
-                              controller: _groupNameController,
-                              decoration: InputDecoration(
-                                labelText: "Group name",
-                                labelStyle: TextStyle(
-                                  color: Colors.grey.shade600,
-                                ),
-                                floatingLabelBehavior:
-                                    FloatingLabelBehavior.auto,
-                                border: InputBorder.none,
-                                hintText: "Enter a group name",
-                                hintStyle: TextStyle(
-                                  color: Colors.grey.shade400,
-                                ),
-                              ),
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey.shade800,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-
-                        // Group photo picker
-                        GestureDetector(
-                          onTap: _pickGroupPhoto,
-                          child: Stack(
-                            children: [
-                              Container(
-                                width: 120,
-                                height: 120,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.blue.shade200,
-                                    width: 2,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.blue.shade100.withOpacity(
-                                        0.3,
-                                      ),
-                                      blurRadius: 10,
-                                      spreadRadius: 2,
-                                    ),
-                                  ],
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(60),
-                                  child:
-                                      _groupPhoto != null
-                                          ? Image.file(
-                                            _groupPhoto!,
-                                            fit: BoxFit.cover,
-                                          )
-                                          : Container(
-                                            color: Colors.blue.shade50,
-                                            child: Icon(
-                                              Icons.group_add,
-                                              size: 48,
-                                              color: Colors.blue.shade300,
-                                            ),
-                                          ),
-                                ),
-                              ),
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blueAccent,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 2,
-                                    ),
-                                  ),
-                                  child: const Icon(
-                                    Icons.camera_alt,
-                                    size: 20,
-                                    color: Colors.white,
-                                  ),
-                                ),
+                            boxShadow: [
+                              BoxShadow(
+                                color:
+                                    const Color(0xFF1565C0).withOpacity(0.15),
+                                blurRadius: 16,
+                                offset: const Offset(0, 6),
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          "Add group photo",
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 14,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(55),
+                            child: _groupPhoto != null
+                                ? Image.file(_groupPhoto!, fit: BoxFit.cover)
+                                : Icon(Icons.group_rounded,
+                                    size: 46,
+                                    color: const Color(0xFF1565C0)
+                                        .withOpacity(0.5)),
                           ),
                         ),
-                        const SizedBox(height: 32),
-
-                        // Create Group button
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _createGroupChat,
-                            style: ElevatedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              backgroundColor: Colors.blueAccent,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 0,
-                              shadowColor: Colors.blue.shade200,
+                        Positioned(
+                          bottom: 2,
+                          right: 2,
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1565C0),
+                              shape: BoxShape.circle,
+                              border:
+                                  Border.all(color: Colors.white, width: 2),
                             ),
-                            child: const Text(
-                              "Create Group",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                            child: const Icon(Icons.camera_alt_rounded,
+                                size: 15, color: Colors.white),
                           ),
                         ),
                       ],
                     ),
                   ),
-        ),
-      ),
+                  const SizedBox(height: 10),
+                  Text(
+                    _groupPhoto != null ? 'Change photo' : 'Add group photo',
+                    style: TextStyle(
+                      color: const Color(0xFF1565C0).withOpacity(0.8),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Group name field
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: _nameFocus.hasFocus
+                            ? const Color(0xFF1565C0).withOpacity(0.4)
+                            : Colors.transparent,
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _nameFocus.hasFocus
+                              ? const Color(0xFF1565C0).withOpacity(0.1)
+                              : Colors.black.withOpacity(0.04),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _groupNameController,
+                      focusNode: _nameFocus,
+                      textCapitalization: TextCapitalization.words,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        color: Color(0xFF1A1A2E),
+                        fontWeight: FontWeight.w500,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Group Name',
+                        labelStyle: TextStyle(
+                          color: _nameFocus.hasFocus
+                              ? const Color(0xFF1565C0)
+                              : Colors.grey.shade500,
+                          fontSize: 14,
+                        ),
+                        hintText: 'e.g. Family, Work Team...',
+                        hintStyle: TextStyle(
+                            color: Colors.grey.shade400, fontSize: 14),
+                        prefixIcon: Icon(
+                          Icons.group_rounded,
+                          color: _nameFocus.hasFocus
+                              ? const Color(0xFF1565C0)
+                              : Colors.grey.shade400,
+                          size: 20,
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 18),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Helper text
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline_rounded,
+                            size: 13, color: Colors.grey.shade400),
+                        const SizedBox(width: 5),
+                        Text(
+                          'You can add members after creating the group',
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey.shade400),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  // Create button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: _createGroupChat,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1565C0),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        shadowColor:
+                            const Color(0xFF1565C0).withOpacity(0.4),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.group_add_rounded, size: 20),
+                          SizedBox(width: 10),
+                          Text(
+                            'Create Group',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 }

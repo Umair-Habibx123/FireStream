@@ -17,96 +17,118 @@ class UserInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(16.0),
+      width: double.infinity,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blue.shade100.withOpacity(0.3),
-            blurRadius: 15,
-            spreadRadius: 2,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Material(
-        elevation: 0,
-        borderRadius: BorderRadius.circular(20),
-        color: Colors.white,
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.blue.shade200, width: 3),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.blue.shade100.withOpacity(0.4),
-                      blurRadius: 10,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: GestureDetector(
-                  onTap: () => onImageTap(profileUrl),
-                  child: CircleAvatar(
-                    radius: 60,
-                    backgroundColor: Colors.blue.shade50,
-                    backgroundImage: NetworkImage(profileUrl),
-                    child:
-                        profileUrl.isEmpty
-                            ? Icon(
-                              Icons.person,
-                              size: 50,
-                              color: Colors.blue.shade300,
-                            )
-                            : null,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                username,
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.grey.shade800,
-                  letterSpacing: 0.5,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  email,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.blue.shade700,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [const Color(0xFF1565C0), Colors.blue.shade600],
         ),
       ),
+      child: Column(
+        children: [
+          const SizedBox(height: 32),
+
+          // Avatar
+          GestureDetector(
+            onTap: profileUrl.isNotEmpty ? () => onImageTap(profileUrl) : null,
+            child: Hero(
+              tag: 'profile-image',
+              child: Stack(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 3),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 20,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: CircleAvatar(
+                      radius: 54,
+                      backgroundColor: Colors.blue.shade300,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(54),
+                        child: profileUrl.isNotEmpty
+                            ? Image.network(
+                                profileUrl,
+                                width: 108,
+                                height: 108,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    _defaultAvatarContent(),
+                              )
+                            : _defaultAvatarContent(),
+                      ),
+                    ),
+                  ),
+                  if (profileUrl.isNotEmpty)
+                    Positioned(
+                      bottom: 2,
+                      right: 2,
+                      child: Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.15),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: Icon(Icons.zoom_in_rounded,
+                            size: 14, color: Colors.blue.shade600),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Username
+          Text(
+            username,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              letterSpacing: 0.3,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+
+          // Email chip
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.18),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              email,
+              style: const TextStyle(
+                fontSize: 13.5,
+                color: Colors.white,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
+          const SizedBox(height: 28),
+        ],
+      ),
     );
+  }
+
+  Widget _defaultAvatarContent() {
+    return const Icon(Icons.person_rounded, size: 54, color: Colors.white);
   }
 }

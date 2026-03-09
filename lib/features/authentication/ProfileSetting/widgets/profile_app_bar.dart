@@ -10,32 +10,21 @@ class ProfileAppBar extends StatelessWidget implements PreferredSizeWidget {
         'My Profile',
         style: TextStyle(
           color: Colors.white,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
           fontSize: 20,
-          letterSpacing: 0.5,
+          letterSpacing: 0.3,
         ),
       ),
       centerTitle: true,
-      backgroundColor: Colors.blueAccent,
-      iconTheme: const IconThemeData(color: Colors.white),
       elevation: 0,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(12),
-        ),
-      ),
+      backgroundColor: Colors.transparent,
+      iconTheme: const IconThemeData(color: Colors.white),
       flexibleSpace: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Colors.blueAccent,
-              Colors.blue.shade700,
-            ],
-          ),
-          borderRadius: const BorderRadius.vertical(
-            bottom: Radius.circular(12),
+            colors: [Colors.blueAccent, Colors.blue.shade700],
           ),
         ),
       ),
@@ -43,5 +32,5 @@ class ProfileAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight + 10);
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }

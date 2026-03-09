@@ -474,30 +474,58 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
   }
 
   Widget _buildSettingsSection(String title, List<Widget> options) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 16, bottom: 8),
-          child: Text(
-            title,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey.shade600,
-              letterSpacing: 0.5,
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(left: 4, bottom: 8),
+        child: Text(
+          title.toUpperCase(),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: Colors.grey.shade500,
+            letterSpacing: 1.1,
+          ),
+        ),
+      ),
+      Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
             ),
-          ),
+          ],
         ),
-        Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.grey.shade200, width: 1),
-          ),
-          child: Column(children: options),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: options
+              .asMap()
+              .entries
+              .map((entry) {
+                final isLast = entry.key == options.length - 1;
+                return Column(
+                  children: [
+                    entry.value,
+                    if (!isLast)
+                      Divider(
+                        height: 1,
+                        thickness: 1,
+                        indent: 68,
+                        endIndent: 16,
+                        color: Colors.grey.shade100,
+                      ),
+                  ],
+                );
+              })
+              .toList(),
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
 }

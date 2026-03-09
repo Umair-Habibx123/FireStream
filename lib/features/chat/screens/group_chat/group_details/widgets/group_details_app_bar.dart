@@ -4,44 +4,36 @@ class GroupDetailsAppBar extends StatelessWidget implements PreferredSizeWidget 
   const GroupDetailsAppBar({super.key});
 
   @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+
+  @override
   Widget build(BuildContext context) {
     return AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_ios_rounded,
+            color: Colors.white, size: 20),
+        onPressed: () => Navigator.of(context).pop(),
+      ),
       title: const Text(
         'Group Details',
         style: TextStyle(
           color: Colors.white,
-          fontWeight: FontWeight.w600,
-          fontSize: 20,
-          letterSpacing: 0.5,
+          fontWeight: FontWeight.w700,
+          fontSize: 17,
         ),
       ),
       centerTitle: true,
-      backgroundColor: Colors.blueAccent,
-      iconTheme: const IconThemeData(color: Colors.white),
-      elevation: 0,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(16),
-        ),
-      ),
       flexibleSpace: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Colors.blueAccent,
-              Colors.blue.shade700,
-            ],
-          ),
-          borderRadius: const BorderRadius.vertical(
-            bottom: Radius.circular(16),
+            colors: [Color(0xFF1565C0), Color(0xFF1976D2)],
           ),
         ),
       ),
     );
   }
-
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight + 10);
 }

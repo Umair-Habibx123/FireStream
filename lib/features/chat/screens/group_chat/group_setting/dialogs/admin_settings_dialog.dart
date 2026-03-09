@@ -16,8 +16,9 @@ class AdminSettingsDialog extends StatefulWidget {
 }
 
 class _AdminSettingsDialogState extends State<AdminSettingsDialog> {
-  bool? _selectedValue;
+  bool _selectedValue = false;
   bool _isLoading = true;
+  bool _isSaving = false;
   String? _errorMessage;
 
   @override
@@ -32,103 +33,269 @@ class _AdminSettingsDialogState extends State<AdminSettingsDialog> {
           .collection('groupChats')
           .doc(widget.chatId)
           .get();
-
       if (doc.exists) {
-        _selectedValue = doc['SettingOnlyAdmin'] ?? false;
+        setState(() => _selectedValue = doc['SettingOnlyAdmin'] ?? false);
       }
     } catch (e) {
-      _errorMessage = "Failed to load admin settings: ${e.toString()}";
+      setState(
+          () => _errorMessage = "Failed to load settings: ${e.toString()}");
     } finally {
       setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleSave() async {
+    setState(() {
+      _isSaving = true;
+      _errorMessage = null;
+    });
+    try {
+      await widget.onSave(_selectedValue);
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      setState(
+          () => _errorMessage = "Failed to update settings: ${e.toString()}");
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text(
-        'Admin Settings',
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-      ),
-      content: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              mainAxisSize: MainAxisSize.min,
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 0,
+      backgroundColor: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
               children: [
-                const Text(
-                  "Allow settings change only by Admin",
-                  style: TextStyle(fontSize: 16),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
+                    color: const Color(0xFFE3F2FD),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade400),
                   ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<bool>(
-                      value: _selectedValue,
-                      isExpanded: true,
-                      items: const [
-                        DropdownMenuItem(value: true, child: Text('Enabled')),
-                        DropdownMenuItem(value: false, child: Text('Disabled')),
-                      ],
-                      onChanged: (bool? newValue) {
-                        setState(() => _selectedValue = newValue);
-                      },
-                    ),
+                  child: const Icon(
+                    Icons.admin_panel_settings_rounded,
+                    color: Color(0xFF1565C0),
+                    size: 20,
                   ),
                 ),
-                if (_errorMessage != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: Text(
-                      _errorMessage!,
-                      style: const TextStyle(color: Colors.red, fontSize: 14),
-                    ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Admin Settings',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A1A2E),
+                    letterSpacing: -0.3,
                   ),
+                ),
               ],
             ),
-      actions: <Widget>[
-        TextButton(
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.grey.shade700,
-            textStyle: const TextStyle(fontSize: 16),
-          ),
-          child: const Text('Cancel'),
-          onPressed: () => Navigator.of(context).pop(),
+            const SizedBox(height: 8),
+            Text(
+              'Restrict group settings changes to admins only.',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade500,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Content
+            if (_isLoading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Color(0xFF1565C0),
+                    ),
+                  ),
+                ),
+              )
+            else ...[
+              Text(
+                'Settings Permission',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade500,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _buildToggleCard(
+                value: true,
+                label: 'Admins Only',
+                subtitle: 'Only admins can change group settings',
+                icon: Icons.lock_rounded,
+              ),
+              const SizedBox(height: 8),
+              _buildToggleCard(
+                value: false,
+                label: 'Everyone',
+                subtitle: 'All members can change group settings',
+                icon: Icons.lock_open_rounded,
+              ),
+            ],
+
+            // Error
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFEBEE),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded,
+                        color: Color(0xFFD32F2F), size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(
+                            color: Color(0xFFD32F2F), fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 24),
+            // Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    onPressed: (_isLoading || _isSaving)
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      backgroundColor: const Color(0xFF1565C0),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: (_isLoading || _isSaving) ? null : _handleSave,
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text('Save',
+                            style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          child: const Text('Save'),
-          onPressed: _handleSave,
-        ),
-      ],
+      ),
     );
   }
 
-  Future<void> _handleSave() async {
-    if (_selectedValue == null) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      await widget.onSave(_selectedValue!);
-      if (mounted) Navigator.of(context).pop();
-    } catch (e) {
-      setState(() {
-        _errorMessage = "Failed to update admin settings: ${e.toString()}";
-      });
-    } finally {
-      setState(() => _isLoading = false);
-    }
+  Widget _buildToggleCard({
+    required bool value,
+    required String label,
+    required String subtitle,
+    required IconData icon,
+  }) {
+    final isSelected = _selectedValue == value;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedValue = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFE3F2FD) : const Color(0xFFF5F7FA),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF1565C0) : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? const Color(0xFF1565C0)
+                    : Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon,
+                  size: 18,
+                  color: isSelected ? Colors.white : Colors.grey.shade500),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected
+                          ? const Color(0xFF1565C0)
+                          : const Color(0xFF1A1A2E),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(subtitle,
+                      style: TextStyle(
+                          fontSize: 12, color: Colors.grey.shade500)),
+                ],
+              ),
+            ),
+            if (isSelected)
+              const Icon(Icons.check_circle_rounded,
+                  color: Color(0xFF1565C0), size: 20),
+          ],
+        ),
+      ),
+    );
   }
 }

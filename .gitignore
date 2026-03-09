@@ -54,6 +54,7 @@ build/
 **/android/gradle.properties
 **/android/key.properties
 **/android/key.jks
+**/android/.kotlin/
 
 # iOS
 **/ios/.symlinks/

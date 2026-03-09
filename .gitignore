@@ -116,3 +116,5 @@ web/.env
 
 # Test generated files
 test/**/output/
+
+APK/

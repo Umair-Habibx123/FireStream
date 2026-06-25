@@ -33,6 +33,7 @@ class ActionButtons extends StatelessWidget {
               }
               final isSaved = snapshot.data == true;
               return _actionTile(
+                context: context,
                 icon: isSaved
                     ? Icons.check_circle_rounded
                     : Icons.person_add_rounded,
@@ -46,6 +47,7 @@ class ActionButtons extends StatelessWidget {
 
           // Add to group
           _actionTile(
+            context: context,
             icon: Icons.group_add_rounded,
             label: 'Add to Group',
             color: Colors.teal.shade600,
@@ -55,6 +57,7 @@ class ActionButtons extends StatelessWidget {
 
           // Block
           _actionTile(
+            context: context,
             icon: Icons.block_rounded,
             label: 'Block User',
             color: const Color(0xFFE53935),
@@ -67,6 +70,7 @@ class ActionButtons extends StatelessWidget {
   }
 
   Widget _actionTile({
+    required BuildContext context,
     required IconData icon,
     required String label,
     required Color color,
@@ -75,7 +79,7 @@ class ActionButtons extends StatelessWidget {
   }) {
     final isDisabled = onTap == null;
     return Material(
-      color: Colors.white,
+      color: Theme.of(context).cardColor,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -125,7 +129,7 @@ class ActionButtons extends StatelessWidget {
                       ? Colors.grey.shade400
                       : isDestructive
                           ? const Color(0xFFE53935)
-                          : const Color(0xFF1A1A2E),
+                          : Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const Spacer(),

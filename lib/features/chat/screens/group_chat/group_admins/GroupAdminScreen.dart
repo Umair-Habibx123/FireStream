@@ -93,7 +93,7 @@ class _AdminsScreenState extends State<AdminsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Remove Admin',
+        title: Text('Remove Admin',
             style: TextStyle(fontWeight: FontWeight.w700)),
         content: Text('Remove $username from admins?'),
         actions: [
@@ -107,7 +107,7 @@ class _AdminsScreenState extends State<AdminsScreen> {
               Navigator.pop(ctx);
               _removeAdmin(email);
             },
-            child: const Text('Remove',
+            child: Text('Remove',
                 style: TextStyle(
                     color: Color(0xFFE53935), fontWeight: FontWeight.w600)),
           ),
@@ -119,7 +119,6 @@ class _AdminsScreenState extends State<AdminsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F8),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -130,7 +129,7 @@ class _AdminsScreenState extends State<AdminsScreen> {
         ),
         title: Column(
           children: [
-            const Text(
+            Text(
               'Group Admins',
               style: TextStyle(
                   color: Colors.white,
@@ -239,10 +238,10 @@ class _AdminsScreenState extends State<AdminsScreen> {
             ),
             title: Text(
               username,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 14.5,
-                color: Color(0xFF1A1A2E),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             subtitle: Text(
@@ -258,7 +257,7 @@ class _AdminsScreenState extends State<AdminsScreen> {
                       color: const Color(0xFF1565C0).withOpacity(0.08),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text(
+                    child: Text(
                       'You',
                       style: TextStyle(
                         color: Color(0xFF1565C0),

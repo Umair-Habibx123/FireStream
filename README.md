@@ -1,88 +1,229 @@
-# FireStream Chat App
+# 🔥 FireStream Chat App
 
-**FireStream Chat App** is a powerful and feature-rich Flutter application that simplifies real-time communication. It leverages Firebase for seamless integration of authentication, messaging, and group management, offering an engaging chat experience.
-Download APK [APK](https://github.com/Umair-Habibx123/FireStream/raw/refs/heads/master/APK/FireStream.apk)
+### Real-time messaging powered by Flutter & Firebase
 
----
+[![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
+[![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev)
+[![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com)
+[![Android](https://img.shields.io/badge/Android-API%2021+-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://android.com)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
-## Features
+[⬇️ Download APK](https://github.com/Umair-Habibx123/FireStream/releases/download/v1.1/FireStream.apk) • [🐛 Report Bug](https://github.com/Umair-Habibx123/FireStream/issues) • [✨ Request Feature](https://github.com/Umair-Habibx123/FireStream/issues)
 
-### **Authentication**
-
-- Email/Password and Google sign-in authentication.
-- Secure user registration and login.
-
-### **Chats**
-
-- Send and receive text messages.
-- Share images within chats.
-- Delete messages (admin can manage all, users can manage their own).
-
-### **Contacts Management**
-
-- Add contacts using authenticated email addresses.
-- Blocklist unwanted contacts for better privacy.
-
-### **Group Chats**
-
-- Create groups for collaborative chats.
-- Add/remove participants via email.
-- Group admin settings for managing permissions and group configuration.
-- View group members and send individual messages.
-- Add any individual contact or a list of contacts to groups.
-
-### **Media and Profile**
-
-- Share media (images) effortlessly.
-- Update and manage user profiles.
+</div>
 
 ---
 
-## Installation
+## 📖 About
 
-1. Clone this repository:
-
-   ```bash
-   git clone https://github.com/Umair-Habibx123/FireStream
-   ```
-
-2. Navigate to the project directory:
-
-   ```bash
-   cd FireStream
-   ```
-
-3. Install dependencies:
-
-   ```bash
-   flutter pub get
-   ```
-
-4. Set up Firebase for your project:
-
-   - Add your `google-services.json` (for Android) and `GoogleService-Info.plist` (for iOS) to the respective directories.
-   - Add your firebase.json in root dir.
-
-5. Run the app:
-   ```bash
-   flutter run
-   ```
+**FireStream** is a powerful, feature-rich Flutter chat application that simplifies real-time communication. It leverages Firebase for seamless authentication, messaging, and group management — offering a full-featured chat experience on Android.
 
 ---
 
-## Usage
+## ✨ Features
 
-1. **Authentication:** Log in or sign up using email/password or Google.
-2. **Chat:** Start one-on-one chats with contacts.
-3. **Groups:**
-   - Create a new group and add participants.
-   - Manage participants and permissions as an admin.
-   - Send messages and share images in groups.
-4. **Contacts:**
-   - Add contacts by email.
-   - Manage blocklist for enhanced privacy.
-5. **Profile Management:** Update your profile picture and information easily.
+### 🔐 Authentication
+- Email/Password and Google Sign-In
+- Secure user registration and login
+
+### 💬 Chats
+- Send and receive text messages in real time
+- Share images within chats
+- Delete messages — admins manage all, users manage their own
+
+### 👥 Contacts Management
+- Add contacts via authenticated email addresses
+- Blocklist unwanted contacts for enhanced privacy
+
+### 🏘️ Group Chats
+- Create groups and add/remove participants by email
+- Admin controls for permissions and group configuration
+- View group members and message individuals directly
+- Add single contacts or bulk contact lists to groups
+
+### 🖼️ Media & Profile
+- Share images effortlessly in chats and groups
+- Update and manage your profile picture and info
 
 ---
 
-**Built with ❤️ using Flutter and Firebase.**
+## 📲 Download
+
+| Platform | Download |
+|---|---|
+| Android (APK) | [⬇️ Download APK](https://github.com/Umair-Habibx123/FireStream/releases/download/v1.1/FireStream.apk) |
+
+> ℹ️ Enable **"Install from Unknown Sources"** in Android settings before installing.
+
+All releases → [GitHub Releases](https://github.com/Umair-Habibx123/FireStream/releases)
+
+---
+
+## 🛠️ Built With
+
+- [Flutter](https://flutter.dev/) — Cross-platform UI framework
+- [Firebase Auth](https://firebase.google.com/products/auth) — Email & Google authentication
+- [Cloud Firestore](https://firebase.google.com/products/firestore) — Real-time database & messaging
+- [Firebase Storage](https://firebase.google.com/products/storage) — Image & media storage
+- [Google Sign-In](https://pub.dev/packages/google_sign_in) — OAuth via Google
+- [Image Picker](https://pub.dev/packages/image_picker) — Camera & gallery access
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- [Flutter SDK](https://flutter.dev/docs/get-started/install) (3.x or higher)
+- [Android Studio](https://developer.android.com/studio) or [VS Code](https://code.visualstudio.com/)
+- Android device or emulator (API 21+)
+- [Firebase Project](https://console.firebase.google.com/) (free)
+
+Check your Flutter setup:
+```bash
+flutter doctor
+```
+
+---
+
+### Installation
+
+**1. Clone the repository**
+```bash
+git clone https://github.com/Umair-Habibx123/FireStream
+cd FireStream
+```
+
+**2. Install dependencies**
+```bash
+flutter pub get
+```
+
+**3. Set up Firebase**
+
+- Go to [Firebase Console](https://console.firebase.google.com/) and create a new project
+- Enable **Authentication** (Email/Password + Google)
+- Enable **Cloud Firestore**
+- Enable **Firebase Storage**
+- Download config files and place them:
+
+```
+android/app/google-services.json       ← Android config
+firebase.json                          ← root directory
+```
+
+**4. Run the app**
+```bash
+# Check connected devices
+flutter devices
+
+# Run on your device
+flutter run -d <device_id>
+```
+
+---
+
+## 📁 Project Structure
+
+```
+FireStream/
+├── lib/
+│   ├── main.dart                      # App entry point
+│   ├── screens/
+│   │   ├── loginScreen.dart           # Login & registration
+│   │   ├── homeScreen.dart            # Chat list / home
+│   │   ├── chatScreen.dart            # One-on-one chat
+│   │   └── groupChatScreen.dart       # Group chat screen
+│   ├── widgets/                       # Reusable UI components
+│   ├── services/                      # Firebase & auth logic
+│   └── models/                        # Data models
+├── android/
+│   └── app/
+│       └── google-services.json       # Firebase Android config
+├── firebase.json                      # Firebase project config
+├── assets/                            # Images, fonts, etc.
+└── pubspec.yaml                       # Dependencies & metadata
+```
+
+---
+
+## 📦 Build APK
+
+```bash
+# Debug build (for testing)
+flutter build apk --debug
+
+# Release build (for distribution)
+flutter build apk --release
+```
+
+Output:
+```
+build/app/outputs/flutter-apk/app-release.apk
+```
+
+---
+
+## 📱 Usage Guide
+
+| Feature | How To |
+|---|---|
+| **Sign In** | Login with email/password or tap Google Sign-In |
+| **New Chat** | Go to Contacts → tap a contact to start chatting |
+| **Send Image** | Tap the 📎 icon inside any chat |
+| **Create Group** | Groups tab → tap ➕ → add participants by email |
+| **Manage Group** | Open group → tap Group Info → admin controls |
+| **Block Contact** | Contacts → long press → Block |
+| **Edit Profile** | Tap your avatar → Edit Profile |
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome!
+
+1. Fork the repository
+2. Create a feature branch
+```bash
+git checkout -b feature/AmazingFeature
+```
+3. Commit your changes
+```bash
+git commit -m "Add AmazingFeature"
+```
+4. Push to the branch
+```bash
+git push origin feature/AmazingFeature
+```
+5. Open a Pull Request
+
+---
+
+## 🐛 Issues
+
+Found a bug or have a suggestion? [Open an issue](https://github.com/Umair-Habibx123/FireStream/issues)
+
+---
+
+## 📄 License
+
+This project is open-source under the **MIT License**. See the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- [Firebase](https://firebase.google.com/) — For real-time backend infrastructure
+- [Flutter](https://flutter.dev/) — For the amazing cross-platform framework
+- Community contributors and supporters
+
+---
+
+<div align="center">
+
+Made with ❤️ using Flutter & Firebase
+
+⭐ Star this repo if you found it helpful!
+
+</div>
+```

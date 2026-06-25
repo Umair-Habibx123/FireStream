@@ -1,4 +1,6 @@
 import 'package:chat_app/features/chat/screens/group_chat/chat_screen/widgets/group_image_bubble.dart';
+import 'package:chat_app/features/chat/widgets/voice_note_player.dart';
+import 'package:chat_app/features/chat/widgets/file_bubble.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -7,6 +9,10 @@ class GroupMessageBubble extends StatelessWidget {
   final String senderEmail;
   final String currentUserEmail;
   final List<dynamic>? imageUrls;
+  final String? audioUrl;
+  final String? fileUrl;
+  final String? fileName;
+  final String? fileType;
   final Timestamp? timestamp;
   final Function(String) onLongPress;
   final Function(String) onUserTap;
@@ -22,10 +28,16 @@ class GroupMessageBubble extends StatelessWidget {
     required this.onLongPress,
     required this.onUserTap,
     required this.onImageTap,
+    this.audioUrl,
+    this.fileUrl,
+    this.fileName,
+    this.fileType,
   });
 
   bool get _isMine => senderEmail == currentUserEmail;
   bool get _hasImages => imageUrls != null && imageUrls!.isNotEmpty;
+  bool get _hasAudio => audioUrl != null && audioUrl!.isNotEmpty;
+  bool get _hasFile => fileUrl != null && fileUrl!.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -68,8 +80,35 @@ class GroupMessageBubble extends StatelessWidget {
                       ),
                     ),
 
+                  // Voice note
+                  if (_hasAudio)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _isMine
+                            ? const Color(0xFF1565C0)
+                            : Theme.of(context).cardColor,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: VoiceNotePlayer(url: audioUrl!, isMine: _isMine),
+                    ),
+
+                  // File attachment
+                  if (_hasFile)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: FileBubble(
+                        url: fileUrl!,
+                        fileName: fileName ?? 'file',
+                        fileType: fileType ?? '',
+                        isMine: _isMine,
+                      ),
+                    ),
+
                   // Text bubble
-                  if (messageText.isNotEmpty) _buildTextBubble(),
+                  if (messageText.isNotEmpty) _buildTextBubble(context),
 
                   // Timestamp
                   Padding(
@@ -162,11 +201,13 @@ class GroupMessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildTextBubble() {
+  Widget _buildTextBubble(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: _isMine ? const Color(0xFF1565C0) : Colors.white,
+        color: _isMine
+            ? const Color(0xFF1565C0)
+            : Theme.of(context).cardColor,
         borderRadius: BorderRadius.only(
           topLeft: const Radius.circular(18),
           topRight: const Radius.circular(18),
@@ -186,7 +227,7 @@ class GroupMessageBubble extends StatelessWidget {
       child: Text(
         messageText,
         style: TextStyle(
-          color: _isMine ? Colors.white : const Color(0xFF1A1A2E),
+          color: _isMine ? Colors.white : Theme.of(context).colorScheme.onSurface,
           fontSize: 15,
           height: 1.45,
           letterSpacing: 0.1,

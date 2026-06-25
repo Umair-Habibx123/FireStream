@@ -7,6 +7,9 @@ import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'package:chat_app/features/chat/screens/individual_chat/user_detail/user_detail_page.dart';
+import 'package:chat_app/features/chat/widgets/voice_note_player.dart';
+import 'package:chat_app/features/chat/widgets/file_bubble.dart';
+import 'package:chat_app/features/services/scheduled_message_service.dart';
 import 'widgets/chat_app_bar.dart';
 import 'widgets/message_bubble.dart';
 import 'widgets/image_bubble.dart';
@@ -29,54 +32,30 @@ class ChatScreen extends StatefulWidget {
   _ChatScreenState createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
+class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   final List<File> _selectedImages = [];
   late Future<String?> _profileUrlFuture;
   bool _isUploading = false;
+  late final ScheduledMessageService _scheduler;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _profileUrlFuture = _getProfilePicture(widget.otherParticipantEmail);
-    // Mark current user as online when entering chat
-    _setOnlineStatus(true);
+    // Presence is owned globally by ChatListScreen's lifecycle observer, so we
+    // don't touch isOnline here (doing so caused the user to appear offline
+    // after leaving a chat).
+    // Deliver any due scheduled messages while this chat is open.
+    _scheduler = ScheduledMessageService(widget.currentUserEmail)..start();
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    // Mark offline when leaving
-    _setOnlineStatus(false);
+    _scheduler.stop();
     _messageController.dispose();
     super.dispose();
-  }
-
-  /// Called when the app goes background/foreground
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _setOnlineStatus(true);
-    } else if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached) {
-      _setOnlineStatus(false);
-    }
-  }
-
-  /// Updates `isOnline` and `lastSeen` on the current user's Firestore doc.
-  /// This is what ChatAppBar's stream reads to show Online / Last seen X ago.
-  Future<void> _setOnlineStatus(bool isOnline) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(widget.currentUserEmail)
-          .update({
-        'isOnline': isOnline,
-        if (!isOnline) 'lastSeen': FieldValue.serverTimestamp(),
-      });
-    } catch (_) {}
   }
 
   Future<String?> _getProfilePicture(String email) async {
@@ -191,7 +170,235 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
   }
 
-  
+  /// Bottom sheet to choose what kind of attachment to send.
+  void _showAttachmentSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _attachOption(ctx, Icons.photo_library_rounded, 'Gallery',
+                      Colors.purple, () {
+                    Navigator.pop(ctx);
+                    _pickImages();
+                  }),
+                  _attachOption(ctx, Icons.insert_drive_file_rounded,
+                      'Document', Colors.blue, () {
+                    Navigator.pop(ctx);
+                    _pickAndSendFiles();
+                  }),
+                  _attachOption(
+                      ctx, Icons.movie_rounded, 'Video / Audio', Colors.orange,
+                      () {
+                    Navigator.pop(ctx);
+                    _pickAndSendFiles();
+                  }),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _attachOption(BuildContext ctx, IconData icon, String label,
+      Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 26),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: TextStyle(fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  /// Picks any file types and sends each as a file message.
+  Future<void> _pickAndSendFiles() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        allowMultiple: true,
+        type: FileType.any,
+      );
+      if (result == null) return;
+
+      setState(() => _isUploading = true);
+      for (final platformFile in result.files) {
+        if (platformFile.path == null) continue;
+        final file = File(platformFile.path!);
+        final name = platformFile.name;
+        final ext = platformFile.extension ?? name.split('.').last;
+        final storageName =
+            '${DateTime.now().millisecondsSinceEpoch}_$name';
+        final snap = await FirebaseStorage.instance
+            .ref('chat_files/$storageName')
+            .putFile(file);
+        final url = await snap.ref.getDownloadURL();
+
+        await FirebaseFirestore.instance
+            .collection('chats')
+            .doc(widget.chatId)
+            .collection('messages')
+            .add({
+          'text': '',
+          'sender': widget.currentUserEmail,
+          'timestamp': FieldValue.serverTimestamp(),
+          'imageUrls': [],
+          'fileUrl': url,
+          'fileName': name,
+          'fileType': ext,
+        });
+
+        await FirebaseFirestore.instance
+            .collection('chats')
+            .doc(widget.chatId)
+            .update({
+          'lastMessage': '📎 $name',
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to send file: $e');
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
+  /// Uploads a recorded voice note and posts it as an audio message.
+  Future<void> _sendAudio(String path) async {
+    setState(() => _isUploading = true);
+    try {
+      final file = File(path);
+      final fileName =
+          'voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      final snap = await FirebaseStorage.instance
+          .ref('chat_audio/$fileName')
+          .putFile(file);
+      final url = await snap.ref.getDownloadURL();
+
+      await FirebaseFirestore.instance
+          .collection('chats')
+          .doc(widget.chatId)
+          .collection('messages')
+          .add({
+        'text': '',
+        'sender': widget.currentUserEmail,
+        'timestamp': FieldValue.serverTimestamp(),
+        'imageUrls': [],
+        'audioUrl': url,
+      });
+
+      await FirebaseFirestore.instance
+          .collection('chats')
+          .doc(widget.chatId)
+          .update({
+        'lastMessage': '🎤 Voice message',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint('Failed to send audio: $e');
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
+  /// Lets the user pick a future date/time and schedules the current message.
+  Future<void> _scheduleMessage() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty && _selectedImages.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Type a message to schedule')),
+      );
+      return;
+    }
+
+    final now = DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: now,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+    );
+    if (date == null || !mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(now.add(const Duration(minutes: 5))),
+    );
+    if (time == null) return;
+
+    final scheduledFor =
+        DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    if (scheduledFor.isBefore(DateTime.now())) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pick a time in the future')),
+        );
+      }
+      return;
+    }
+
+    // Upload any selected images now so they're ready at delivery time.
+    setState(() => _isUploading = true);
+    final imageUrls = <String>[];
+    for (final img in _selectedImages) {
+      final url = await _uploadImage(img);
+      if (url != null) imageUrls.add(url);
+    }
+
+    await ScheduledMessageService.schedule(
+      chatId: widget.chatId,
+      collection: 'chats',
+      sender: widget.currentUserEmail,
+      text: text,
+      imageUrls: imageUrls,
+      scheduledFor: scheduledFor,
+      toLabel: widget.otherParticipantEmail,
+    );
+
+    _messageController.clear();
+    _selectedImages.clear();
+    if (mounted) {
+      setState(() => _isUploading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Scheduled for ${_formatTimestamp(Timestamp.fromDate(scheduledFor))}'),
+        ),
+      );
+    }
+  }
 
   void _deleteMessage(String messageId) async {
     try {
@@ -228,9 +435,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Message',
+        title: Text('Delete Message',
             style: TextStyle(fontWeight: FontWeight.w700)),
-        content: const Text('Are you sure you want to delete this message?'),
+        content: Text('Are you sure you want to delete this message?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -242,7 +449,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               _deleteMessage(messageId);
               Navigator.of(ctx).pop();
             },
-            child: const Text('Delete',
+            child: Text('Delete',
                 style: TextStyle(
                     color: Color(0xFFE53935),
                     fontWeight: FontWeight.w600)),
@@ -272,9 +479,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: BoxDecoration(
+          color: Theme.of(ctx).cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
         child: Column(
@@ -295,7 +502,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: const Text('Copied to clipboard'),
+                  content: Text('Copied to clipboard'),
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
@@ -326,9 +533,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: BoxDecoration(
+          color: Theme.of(ctx).cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
         child: Column(
@@ -385,7 +592,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               fontWeight: FontWeight.w500,
               color: label == 'Delete'
                   ? const Color(0xFFE53935)
-                  : const Color(0xFF1A1A2E))),
+                  : Theme.of(context).colorScheme.onSurface)),
       onTap: onTap,
     );
   }
@@ -411,7 +618,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F8),
       appBar: ChatAppBar(
         profileUrlFuture: _profileUrlFuture,
         otherParticipantEmail: widget.otherParticipantEmail,
@@ -522,6 +728,45 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                 onImageTap: _viewImage,
                               ),
                             ),
+                          if ((message.data() as Map)['fileUrl'] != null &&
+                              (message['fileUrl'] as String).isNotEmpty)
+                            Container(
+                              margin: EdgeInsets.only(
+                                left: isMine ? 48 : 10,
+                                right: isMine ? 10 : 48,
+                                bottom: 4,
+                              ),
+                              child: FileBubble(
+                                url: message['fileUrl'],
+                                fileName:
+                                    (message.data() as Map)['fileName'] ??
+                                        'file',
+                                fileType:
+                                    (message.data() as Map)['fileType'] ?? '',
+                                isMine: isMine,
+                              ),
+                            ),
+                          if ((message.data() as Map)['audioUrl'] != null &&
+                              (message['audioUrl'] as String).isNotEmpty)
+                            Container(
+                              margin: EdgeInsets.only(
+                                left: isMine ? 48 : 10,
+                                right: isMine ? 10 : 48,
+                                bottom: 4,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isMine
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(context).cardColor,
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              child: VoiceNotePlayer(
+                                url: message['audioUrl'],
+                                isMine: isMine,
+                              ),
+                            ),
                           if (message['text'] != null &&
                               message['text'].isNotEmpty)
                             MessageBubble(
@@ -555,9 +800,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             messageController: _messageController,
             selectedImages: _selectedImages,
             isUploading: _isUploading,
-            onPickImages: _pickImages,
+            onPickImages: _showAttachmentSheet,
             onRemoveImage: _removeImage,
             onSendMessage: _sendMessage,
+            onSendAudio: _sendAudio,
+            onSchedule: _scheduleMessage,
           ),
         ],
       ),

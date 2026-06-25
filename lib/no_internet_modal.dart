@@ -84,12 +84,12 @@ class _NoInternetModalState extends State<NoInternetModal>
                     ),
                   ),
                   const SizedBox(height: 20),
-                  const Text(
+                  Text(
                     'No Connection',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF1A1A2E),
+                      color: Theme.of(context).colorScheme.onSurface,
                       letterSpacing: -0.4,
                     ),
                   ),
@@ -124,7 +124,7 @@ class _NoInternetModalState extends State<NoInternetModal>
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const Text(
+                        Text(
                           'Offline',
                           style: TextStyle(
                             fontSize: 13,
@@ -159,7 +159,7 @@ class _NoInternetModalState extends State<NoInternetModal>
                                 color: Colors.white,
                               ),
                             )
-                          : const Text(
+                          : Text(
                               'Try Again',
                               style: TextStyle(
                                 fontWeight: FontWeight.w700,

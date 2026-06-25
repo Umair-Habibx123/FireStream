@@ -380,7 +380,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        _buildSettingsSection("Group Settings", [
+                        _buildSettingsSection(context, "Group Settings", [
                           SettingsOptionTile(
                             title: "Change Group Name",
                             icon: Icons.edit,
@@ -403,7 +403,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                           ),
                         ]),
                         const SizedBox(height: 16),
-                        _buildSettingsSection("Members", [
+                        _buildSettingsSection(context, "Members", [
                           SettingsOptionTile(
                             title: "Add Member",
                             icon: Icons.person_add,
@@ -426,7 +426,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                           ),
                         ]),
                         const SizedBox(height: 16),
-                        _buildSettingsSection("Danger Zone", [
+                        _buildSettingsSection(context, "Danger Zone", [
                           SettingsOptionTile(
                             title: "Delete Group",
                             icon: Icons.delete_forever,
@@ -473,7 +473,8 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
     );
   }
 
-  Widget _buildSettingsSection(String title, List<Widget> options) {
+  Widget _buildSettingsSection(
+      BuildContext context, String title, List<Widget> options) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -491,7 +492,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
       ),
       Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(

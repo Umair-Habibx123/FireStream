@@ -56,7 +56,7 @@ class _ChangeGroupNameDialogState extends State<ChangeGroupNameDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 0,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -80,12 +80,12 @@ class _ChangeGroupNameDialogState extends State<ChangeGroupNameDialog> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Text(
+                Text(
                   'Change Group Name',
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A2E),
+                    color: Theme.of(context).colorScheme.onSurface,
                     letterSpacing: -0.3,
                   ),
                 ),
@@ -107,9 +107,9 @@ class _ChangeGroupNameDialogState extends State<ChangeGroupNameDialog> {
               controller: _nameController,
               autofocus: true,
               textCapitalization: TextCapitalization.words,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
-                color: Color(0xFF1A1A2E),
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w500,
               ),
               decoration: InputDecoration(
@@ -117,7 +117,7 @@ class _ChangeGroupNameDialogState extends State<ChangeGroupNameDialog> {
                 hintStyle:
                     TextStyle(color: Colors.grey.shade400, fontSize: 15),
                 filled: true,
-                fillColor: const Color(0xFFF5F7FA),
+                fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF5F7FA),
                 prefixIcon: const Icon(Icons.group_rounded,
                     color: Color(0xFF1565C0), size: 20),
                 border: OutlineInputBorder(
@@ -153,7 +153,7 @@ class _ChangeGroupNameDialogState extends State<ChangeGroupNameDialog> {
                     Expanded(
                       child: Text(
                         _errorMessage!,
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: Color(0xFFD32F2F), fontSize: 13),
                       ),
                     ),
@@ -204,7 +204,7 @@ class _ChangeGroupNameDialogState extends State<ChangeGroupNameDialog> {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white),
                           )
-                        : const Text('Save',
+                        : Text('Save',
                             style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ),

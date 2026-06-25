@@ -2,6 +2,7 @@ import 'package:chat_app/features/chat/screens/group_chat/chat_screen/widgets/gr
 import 'package:chat_app/features/chat/screens/group_chat/chat_screen/widgets/group_image_preview_screen.dart';
 import 'package:chat_app/features/chat/screens/group_chat/chat_screen/widgets/group_message_bubble.dart';
 import 'package:chat_app/features/chat/screens/group_chat/chat_screen/widgets/group_message_input.dart';
+import 'package:chat_app/features/services/scheduled_message_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
@@ -38,17 +39,20 @@ class _GroupChatScreenState extends State<GroupChatScreen>
   bool _isUploading = false;
   bool _canSendMessages = true;
   bool _messagesOnlyAdmin = false;
+  late final ScheduledMessageService _scheduler;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _fetchAdminSettings();
+    _scheduler = ScheduledMessageService(widget.currentUserEmail)..start();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _scheduler.stop();
     _messageController.dispose();
     super.dispose();
   }
@@ -145,6 +149,203 @@ class _GroupChatScreenState extends State<GroupChatScreen>
   void _removeImage(int index) =>
       setState(() => _selectedImages.removeAt(index));
 
+  /// Attachment chooser (gallery / document / video-audio).
+  void _showAttachmentSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _attachOption(Icons.photo_library_rounded, 'Gallery',
+                  Colors.purple, () {
+                Navigator.pop(ctx);
+                _pickImages();
+              }),
+              _attachOption(Icons.insert_drive_file_rounded, 'Document',
+                  Colors.blue, () {
+                Navigator.pop(ctx);
+                _pickAndSendFiles();
+              }),
+              _attachOption(Icons.movie_rounded, 'Video / Audio', Colors.orange,
+                  () {
+                Navigator.pop(ctx);
+                _pickAndSendFiles();
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _attachOption(
+      IconData icon, String label, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 26),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  /// Uploads a recorded voice note and posts it as an audio message.
+  Future<void> _sendAudio(String path) async {
+    setState(() => _isUploading = true);
+    try {
+      final fileName = 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      final snap = await FirebaseStorage.instance
+          .ref('chat_audio/$fileName')
+          .putFile(File(path));
+      final url = await snap.ref.getDownloadURL();
+
+      await FirebaseFirestore.instance
+          .collection('groupChats')
+          .doc(widget.chatId)
+          .collection('messages')
+          .add({
+        'text': '',
+        'sender': widget.currentUserEmail,
+        'timestamp': FieldValue.serverTimestamp(),
+        'imageUrls': [],
+        'audioUrl': url,
+      });
+      await FirebaseFirestore.instance
+          .collection('groupChats')
+          .doc(widget.chatId)
+          .update({
+        'lastMessage': '🎤 Voice message',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint('Failed to send audio: $e');
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
+  /// Picks any file type and posts each as a file message.
+  Future<void> _pickAndSendFiles() async {
+    try {
+      final result = await FilePicker.platform
+          .pickFiles(allowMultiple: true, type: FileType.any);
+      if (result == null) return;
+      setState(() => _isUploading = true);
+      for (final pf in result.files) {
+        if (pf.path == null) continue;
+        final name = pf.name;
+        final ext = pf.extension ?? name.split('.').last;
+        final storageName = '${DateTime.now().millisecondsSinceEpoch}_$name';
+        final snap = await FirebaseStorage.instance
+            .ref('chat_files/$storageName')
+            .putFile(File(pf.path!));
+        final url = await snap.ref.getDownloadURL();
+
+        await FirebaseFirestore.instance
+            .collection('groupChats')
+            .doc(widget.chatId)
+            .collection('messages')
+            .add({
+          'text': '',
+          'sender': widget.currentUserEmail,
+          'timestamp': FieldValue.serverTimestamp(),
+          'imageUrls': [],
+          'fileUrl': url,
+          'fileName': name,
+          'fileType': ext,
+        });
+        await FirebaseFirestore.instance
+            .collection('groupChats')
+            .doc(widget.chatId)
+            .update({
+          'lastMessage': '📎 $name',
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to send file: $e');
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
+  /// Schedule the current text/images for later delivery.
+  Future<void> _scheduleMessage() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty && _selectedImages.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Type a message to schedule')),
+      );
+      return;
+    }
+    final now = DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: now,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+    );
+    if (date == null || !mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(now.add(const Duration(minutes: 5))),
+    );
+    if (time == null) return;
+    final scheduledFor =
+        DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    if (scheduledFor.isBefore(DateTime.now())) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pick a time in the future')),
+        );
+      }
+      return;
+    }
+
+    setState(() => _isUploading = true);
+    final imageUrls = <String>[];
+    for (final img in _selectedImages) {
+      final url = await _uploadImage(img);
+      if (url != null) imageUrls.add(url);
+    }
+    await ScheduledMessageService.schedule(
+      chatId: widget.chatId,
+      collection: 'groupChats',
+      sender: widget.currentUserEmail,
+      text: text,
+      imageUrls: imageUrls,
+      scheduledFor: scheduledFor,
+      toLabel: widget.groupName,
+    );
+    _messageController.clear();
+    _selectedImages.clear();
+    if (mounted) {
+      setState(() => _isUploading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Message scheduled')),
+      );
+    }
+  }
+
   void _viewImage(String imageUrl) {
     Navigator.push(
       context,
@@ -189,9 +390,9 @@ class _GroupChatScreenState extends State<GroupChatScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Message',
+        title: Text('Delete Message',
             style: TextStyle(fontWeight: FontWeight.w700)),
-        content: const Text('Are you sure you want to delete this message?'),
+        content: Text('Are you sure you want to delete this message?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -203,7 +404,7 @@ class _GroupChatScreenState extends State<GroupChatScreen>
               _deleteMessage(messageId);
               Navigator.of(ctx).pop();
             },
-            child: const Text('Delete',
+            child: Text('Delete',
                 style: TextStyle(
                     color: Color(0xFFE53935), fontWeight: FontWeight.w600)),
           ),
@@ -223,9 +424,9 @@ class _GroupChatScreenState extends State<GroupChatScreen>
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: BoxDecoration(
+          color: Theme.of(ctx).cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
         child: Column(
@@ -247,7 +448,7 @@ class _GroupChatScreenState extends State<GroupChatScreen>
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: const Text('Copied to clipboard'),
+                    content: Text('Copied to clipboard'),
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
@@ -294,7 +495,7 @@ class _GroupChatScreenState extends State<GroupChatScreen>
           fontWeight: FontWeight.w500,
           color: label == 'Delete'
               ? const Color(0xFFE53935)
-              : const Color(0xFF1A1A2E),
+              : Theme.of(context).colorScheme.onSurface,
         ),
       ),
       onTap: onTap,
@@ -343,10 +544,10 @@ class _GroupChatScreenState extends State<GroupChatScreen>
               const SizedBox(height: 16),
               Text(
                 username,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF1A1A2E),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 6),
@@ -375,7 +576,7 @@ class _GroupChatScreenState extends State<GroupChatScreen>
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('Close'),
+                  child: Text('Close'),
                 ),
               ),
             ],
@@ -399,7 +600,6 @@ class _GroupChatScreenState extends State<GroupChatScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F8),
       appBar: GroupChatAppBar(
         groupName: widget.groupName,
         groupPhotoUrl: widget.groupPhotoUrl,
@@ -465,11 +665,16 @@ class _GroupChatScreenState extends State<GroupChatScreen>
                         message['imageUrls'] != null &&
                             (message['imageUrls'] as List).isNotEmpty;
 
+                    final data = message.data() as Map<String, dynamic>;
                     return GroupMessageBubble(
                       messageText: message['text'] ?? '',
                       senderEmail: message['sender'],
                       currentUserEmail: widget.currentUserEmail,
                       imageUrls: message['imageUrls'],
+                      audioUrl: data['audioUrl'] as String?,
+                      fileUrl: data['fileUrl'] as String?,
+                      fileName: data['fileName'] as String?,
+                      fileType: data['fileType'] as String?,
                       timestamp: message['timestamp'],
                       onLongPress: (_) => _showMessageOptions(
                         isSentByCurrentUser: isMine,
@@ -493,9 +698,11 @@ class _GroupChatScreenState extends State<GroupChatScreen>
             canSendMessages: _canSendMessages,
             isUploading: _isUploading,
             onSendPressed: _sendMessage,
-            onPickImagesPressed: _pickImages,
+            onPickImagesPressed: _showAttachmentSheet,
             selectedImages: _selectedImages,
             onRemoveImage: _removeImage,
+            onSendAudio: _sendAudio,
+            onSchedule: _scheduleMessage,
           ),
         ],
       ),

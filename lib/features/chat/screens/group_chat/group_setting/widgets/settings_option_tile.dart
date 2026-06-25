@@ -49,7 +49,7 @@ class SettingsOptionTile extends StatelessWidget {
                     fontWeight: FontWeight.w500,
                     color: isDestructive
                         ? const Color(0xFFD32F2F)
-                        : const Color(0xFF1A1A2E),
+                        : Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),

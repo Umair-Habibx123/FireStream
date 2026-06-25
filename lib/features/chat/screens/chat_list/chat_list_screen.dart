@@ -2,7 +2,12 @@ import 'package:chat_app/features/authentication/ProfileSetting/ProfileScreen.da
 import 'package:chat_app/features/chat/screens/group_chat/create_chat/addGroupChatScreen.dart';
 import 'package:chat_app/features/chat/screens/individual_chat/add_chat/addchatScreen.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:chat_app/features/services/presence_service.dart';
+import 'package:chat_app/features/services/theme_service.dart';
+import 'package:chat_app/features/services/scheduled_message_service.dart';
+import 'package:chat_app/features/chat/screens/scheduled/scheduled_messages_screen.dart';
 import 'widgets/individual_chat_list.dart';
 import 'widgets/group_chat_list.dart';
 
@@ -14,16 +19,31 @@ class ChatListScreen extends StatefulWidget {
 }
 
 class _ChatListScreenState extends State<ChatListScreen>
-    with SingleTickerProviderStateMixin, RouteAware {
+    with SingleTickerProviderStateMixin, RouteAware, WidgetsBindingObserver {
   String _currentUserEmail = "";
   String _username = "";
   late TabController _tabController;
   String? _photoURL;
   bool _isLoading = true;
+  PresenceService? _presence;
+  ScheduledMessageService? _scheduler;
 
   @override
   void didPopNext() {
     _loadUserData();
+    _presence?.setOnline();
+  }
+
+  /// App-wide presence: online while the app is in the foreground.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _presence?.setOnline();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached ||
+        state == AppLifecycleState.hidden) {
+      _presence?.setOffline();
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -37,6 +57,7 @@ class _ChatListScreenState extends State<ChatListScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 2, vsync: this);
     _loadCurrentUserEmail();
     _loadUserData();
@@ -44,22 +65,30 @@ class _ChatListScreenState extends State<ChatListScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _presence?.setOffline();
+    _scheduler?.stop();
     _tabController.dispose();
     super.dispose();
   }
 
   Future<void> _loadCurrentUserEmail() async {
     final prefs = await SharedPreferences.getInstance();
+    final email = prefs.getString('userEmail') ?? '';
     setState(() {
-      _currentUserEmail = prefs.getString('userEmail') ?? '';
+      _currentUserEmail = email;
       _isLoading = false;
     });
+    // Start presence + scheduled-message delivery now that we know the user.
+    if (email.isNotEmpty) {
+      _presence = PresenceService(email)..setOnline();
+      _scheduler = ScheduledMessageService(email)..start();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F8),
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           // ── 1. Hero header (expandable, no tab bar inside) ──────────────
@@ -113,6 +142,37 @@ class _ChatListScreenState extends State<ChatListScreen>
                             ],
                           ),
                         ),
+                        // Scheduled messages
+                        IconButton(
+                          tooltip: 'Scheduled messages',
+                          icon: const Icon(Icons.schedule_send_rounded,
+                              color: Colors.white),
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ScheduledMessagesScreen(
+                                  currentUserEmail: _currentUserEmail),
+                            ),
+                          ),
+                        ),
+                        // Master light/dark theme switcher
+                        Builder(builder: (context) {
+                          final theme = context.watch<ThemeService>();
+                          final isDark =
+                              Theme.of(context).brightness == Brightness.dark;
+                          return IconButton(
+                            tooltip: 'Toggle theme',
+                            icon: Icon(
+                              isDark
+                                  ? Icons.light_mode_rounded
+                                  : Icons.dark_mode_rounded,
+                              color: Colors.white,
+                            ),
+                            onPressed: () => theme.setMode(
+                                isDark ? ThemeMode.light : ThemeMode.dark),
+                          );
+                        }),
+                        const SizedBox(width: 4),
                         GestureDetector(
                           onTap: () => Navigator.push(
                             context,
@@ -235,7 +295,7 @@ class _ChatListScreenState extends State<ChatListScreen>
         heroTag: tooltip,
         onPressed: onTap,
         tooltip: tooltip,
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).cardColor,
         elevation: 3,
         child: Icon(icon, color: const Color(0xFF1565C0), size: 20),
       );

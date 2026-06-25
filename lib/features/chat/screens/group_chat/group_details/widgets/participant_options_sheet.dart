@@ -27,9 +27,9 @@ class ParticipantOptionsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: const EdgeInsets.fromLTRB(0, 8, 0, 16),
       child: Column(
@@ -68,10 +68,10 @@ class ParticipantOptionsSheet extends StatelessWidget {
                     children: [
                       Text(
                         isCurrentUser ? 'Your Options' : 'Participant',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 16,
-                          color: Color(0xFF1A1A2E),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       if (!isCurrentUser)
@@ -92,7 +92,7 @@ class ParticipantOptionsSheet extends StatelessWidget {
                       color: const Color(0xFFFFA000).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Admin',
                       style: TextStyle(
                         fontSize: 11,
@@ -111,6 +111,7 @@ class ParticipantOptionsSheet extends StatelessWidget {
           // Actions
           if (isCurrentUser)
             _tile(
+              context: context,
               icon: Icons.logout_rounded,
               label: 'Leave Group',
               subtitle: 'Remove yourself from this group',
@@ -120,6 +121,7 @@ class ParticipantOptionsSheet extends StatelessWidget {
 
           if (!isCurrentUser) ...[
             _tile(
+              context: context,
               icon: Icons.message_rounded,
               label: 'Send Message',
               subtitle: 'Start a private conversation',
@@ -128,6 +130,7 @@ class ParticipantOptionsSheet extends StatelessWidget {
             ),
             if (isCurrentUserAdmin && isAdmin)
               _tile(
+                context: context,
                 icon: Icons.remove_moderator_rounded,
                 label: 'Remove Admin',
                 subtitle: 'Revoke admin privileges',
@@ -136,6 +139,7 @@ class ParticipantOptionsSheet extends StatelessWidget {
               ),
             if (isCurrentUserAdmin && !isAdmin)
               _tile(
+                context: context,
                 icon: Icons.admin_panel_settings_rounded,
                 label: 'Make Admin',
                 subtitle: 'Grant admin privileges',
@@ -144,6 +148,7 @@ class ParticipantOptionsSheet extends StatelessWidget {
               ),
             if (isCurrentUserAdmin)
               _tile(
+                context: context,
                 icon: Icons.person_remove_rounded,
                 label: 'Remove from Group',
                 subtitle: 'Remove this participant',
@@ -159,6 +164,7 @@ class ParticipantOptionsSheet extends StatelessWidget {
   }
 
   Widget _tile({
+    required BuildContext context,
     required IconData icon,
     required String label,
     required String subtitle,
@@ -196,7 +202,7 @@ class ParticipantOptionsSheet extends StatelessWidget {
                         color: label.contains('Remove') ||
                                 label.contains('Leave')
                             ? const Color(0xFFE53935)
-                            : const Color(0xFF1A1A2E),
+                            : Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     Text(

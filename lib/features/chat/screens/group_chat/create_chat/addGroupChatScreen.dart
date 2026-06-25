@@ -51,7 +51,7 @@ class _AddGroupChatScreenState extends State<AddGroupChatScreen> {
     if (groupName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Please enter a group name'),
+          content: Text('Please enter a group name'),
           behavior: SnackBarBehavior.floating,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -118,7 +118,6 @@ class _AddGroupChatScreenState extends State<AddGroupChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F8),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -127,7 +126,7 @@ class _AddGroupChatScreenState extends State<AddGroupChatScreen> {
               color: Colors.white, size: 20),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
+        title: Text(
           'New Group',
           style: TextStyle(
             color: Colors.white,
@@ -248,9 +247,9 @@ class _AddGroupChatScreenState extends State<AddGroupChatScreen> {
                       controller: _groupNameController,
                       focusNode: _nameFocus,
                       textCapitalization: TextCapitalization.words,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
-                        color: Color(0xFF1A1A2E),
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontWeight: FontWeight.w500,
                       ),
                       decoration: InputDecoration(

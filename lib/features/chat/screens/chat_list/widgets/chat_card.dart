@@ -129,9 +129,9 @@ class _ChatCardState extends State<ChatCard> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Chat',
+        title: Text('Delete Chat',
             style: TextStyle(fontWeight: FontWeight.w700)),
-        content: const Text(
+        content: Text(
             'Are you sure you want to delete this conversation?'),
         actions: [
           TextButton(
@@ -144,7 +144,7 @@ class _ChatCardState extends State<ChatCard> {
               Navigator.of(ctx).pop();
               await _deleteChat();
             },
-            child: const Text('Delete',
+            child: Text('Delete',
                 style: TextStyle(
                     color: Color(0xFFE53935), fontWeight: FontWeight.w600)),
           ),
@@ -254,7 +254,7 @@ class _ChatCardState extends State<ChatCard> {
         ),
       ),
       child: Material(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
@@ -315,7 +315,8 @@ class _ChatCardState extends State<ChatCard> {
                               : Colors.transparent,
                           shape: BoxShape.circle,
                           border: isOnline
-                              ? Border.all(color: Colors.white, width: 2)
+                              ? Border.all(
+                                  color: Theme.of(context).cardColor, width: 2)
                               : null,
                         ),
                       ),
@@ -334,10 +335,10 @@ class _ChatCardState extends State<ChatCard> {
                           Expanded(
                             child: Text(
                               username,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 15,
-                                color: Color(0xFF1A1A2E),
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),

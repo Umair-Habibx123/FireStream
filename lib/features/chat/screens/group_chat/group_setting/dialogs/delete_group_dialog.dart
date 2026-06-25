@@ -17,7 +17,7 @@ class _DeleteGroupDialogState extends State<DeleteGroupDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 0,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -37,12 +37,12 @@ class _DeleteGroupDialogState extends State<DeleteGroupDialog> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Delete Group?',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1A1A2E),
+                color: Theme.of(context).colorScheme.onSurface,
                 letterSpacing: -0.3,
               ),
             ),
@@ -105,7 +105,7 @@ class _DeleteGroupDialogState extends State<DeleteGroupDialog> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
+                        : Text(
                             'Delete',
                             style: TextStyle(fontWeight: FontWeight.w700),
                           ),

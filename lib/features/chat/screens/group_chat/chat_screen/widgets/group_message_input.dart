@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:chat_app/features/services/audio_recorder_service.dart';
 
 class GroupMessageInput extends StatefulWidget {
   final TextEditingController messageController;
@@ -9,6 +11,8 @@ class GroupMessageInput extends StatefulWidget {
   final VoidCallback onPickImagesPressed;
   final List<File> selectedImages;
   final Function(int) onRemoveImage;
+  final Function(String path)? onSendAudio;
+  final VoidCallback? onSchedule;
 
   const GroupMessageInput({
     super.key,
@@ -19,6 +23,8 @@ class GroupMessageInput extends StatefulWidget {
     required this.onPickImagesPressed,
     required this.selectedImages,
     required this.onRemoveImage,
+    this.onSendAudio,
+    this.onSchedule,
   });
 
   @override
@@ -27,6 +33,10 @@ class GroupMessageInput extends StatefulWidget {
 
 class _GroupMessageInputState extends State<GroupMessageInput> {
   bool _hasText = false;
+  final AudioRecorderService _recorder = AudioRecorderService();
+  bool _isRecording = false;
+  Duration _recordElapsed = Duration.zero;
+  Timer? _recordTimer;
 
   @override
   void initState() {
@@ -37,6 +47,8 @@ class _GroupMessageInputState extends State<GroupMessageInput> {
   @override
   void dispose() {
     widget.messageController.removeListener(_onTextChanged);
+    _recordTimer?.cancel();
+    _recorder.dispose();
     super.dispose();
   }
 
@@ -45,11 +57,56 @@ class _GroupMessageInputState extends State<GroupMessageInput> {
     if (hasText != _hasText) setState(() => _hasText = hasText);
   }
 
+  Future<void> _startRecording() async {
+    final error = await _recorder.start();
+    if (error != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error)));
+      }
+      return;
+    }
+    setState(() => _isRecording = true);
+    _recordTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _recordElapsed = _recorder.elapsed);
+    });
+  }
+
+  Future<void> _stopAndSend() async {
+    _recordTimer?.cancel();
+    final path = await _recorder.stop();
+    setState(() {
+      _isRecording = false;
+      _recordElapsed = Duration.zero;
+    });
+    if (path != null) widget.onSendAudio?.call(path);
+  }
+
+  Future<void> _cancelRecording() async {
+    _recordTimer?.cancel();
+    await _recorder.cancel();
+    setState(() {
+      _isRecording = false;
+      _recordElapsed = Duration.zero;
+    });
+  }
+
+  String _fmt(Duration d) {
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final fieldBg = Theme.of(context).brightness == Brightness.dark
+        ? Colors.white10
+        : const Color(0xFFF2F4F7);
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.06),
@@ -61,23 +118,21 @@ class _GroupMessageInputState extends State<GroupMessageInput> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Upload progress
           if (widget.isUploading)
             SizedBox(
               height: 2,
               child: LinearProgressIndicator(
-                backgroundColor: Colors.blue.shade50,
-                color: const Color(0xFF1565C0),
+                backgroundColor: primary.withOpacity(0.15),
+                color: primary,
               ),
             ),
 
-          // Admin restriction banner
           if (!widget.canSendMessages)
             Container(
               width: double.infinity,
               padding:
                   const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-              color: Colors.orange.shade50,
+              color: Colors.orange.withOpacity(0.12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -142,96 +197,13 @@ class _GroupMessageInputState extends State<GroupMessageInput> {
               ),
             ),
 
-          // Input row
           SafeArea(
             top: false,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  // Attach button
-                  GestureDetector(
-                    onTap: widget.canSendMessages
-                        ? widget.onPickImagesPressed
-                        : null,
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: widget.canSendMessages
-                            ? const Color(0xFF1565C0).withOpacity(0.1)
-                            : Colors.grey.shade100,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.add_photo_alternate_outlined,
-                        size: 22,
-                        color: widget.canSendMessages
-                            ? const Color(0xFF1565C0)
-                            : Colors.grey.shade400,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Text field
-                  Expanded(
-                    child: Container(
-                      constraints: const BoxConstraints(maxHeight: 120),
-                      decoration: BoxDecoration(
-                        color: widget.canSendMessages
-                            ? const Color(0xFFF2F4F7)
-                            : Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(
-                          color: const Color(0xFFE4E7EC),
-                          width: 1,
-                        ),
-                      ),
-                      child: TextField(
-                        controller: widget.messageController,
-                        maxLines: 5,
-                        minLines: 1,
-                        enabled: widget.canSendMessages,
-                        textCapitalization: TextCapitalization.sentences,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          color: Color(0xFF1A1A2E),
-                          height: 1.4,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: widget.canSendMessages
-                              ? 'Message...'
-                              : 'Only admins can send messages',
-                          hintStyle: TextStyle(
-                            color: Colors.grey.shade400,
-                            fontSize: 14,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Send / mic button
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    transitionBuilder: (child, anim) =>
-                        ScaleTransition(scale: anim, child: child),
-                    child:
-                        (_hasText || widget.selectedImages.isNotEmpty) &&
-                                widget.canSendMessages
-                            ? _sendButton()
-                            : _micButton(),
-                  ),
-                ],
-              ),
+              child: _isRecording
+                  ? _recordingRow(primary)
+                  : _inputRow(primary, fieldBg),
             ),
           ),
         ],
@@ -239,7 +211,122 @@ class _GroupMessageInputState extends State<GroupMessageInput> {
     );
   }
 
-  Widget _sendButton() {
+  Widget _inputRow(Color primary, Color fieldBg) {
+    final enabled = widget.canSendMessages;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        // Attach
+        GestureDetector(
+          onTap: enabled ? widget.onPickImagesPressed : null,
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: enabled
+                  ? primary.withOpacity(0.1)
+                  : Colors.grey.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.add_rounded,
+                size: 22, color: enabled ? primary : Colors.grey),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Container(
+            constraints: const BoxConstraints(maxHeight: 120),
+            decoration: BoxDecoration(
+              color: fieldBg,
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: widget.messageController,
+                    maxLines: 5,
+                    minLines: 1,
+                    enabled: enabled,
+                    textCapitalization: TextCapitalization.sentences,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Theme.of(context).colorScheme.onSurface,
+                      height: 1.4,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: enabled
+                          ? 'Message...'
+                          : 'Only admins can send messages',
+                      hintStyle:
+                          TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                    ),
+                  ),
+                ),
+                if (enabled && widget.onSchedule != null)
+                  IconButton(
+                    tooltip: 'Schedule message',
+                    icon: Icon(Icons.schedule_rounded,
+                        color: primary.withOpacity(0.8), size: 22),
+                    onPressed: widget.onSchedule,
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          transitionBuilder: (child, anim) =>
+              ScaleTransition(scale: anim, child: child),
+          child: (_hasText || widget.selectedImages.isNotEmpty) && enabled
+              ? _sendButton(primary)
+              : _micButton(primary, enabled),
+        ),
+      ],
+    );
+  }
+
+  Widget _recordingRow(Color primary) {
+    return Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+          onPressed: _cancelRecording,
+          tooltip: 'Cancel',
+        ),
+        const SizedBox(width: 4),
+        Container(
+          width: 12,
+          height: 12,
+          decoration:
+              const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 10),
+        Text(_fmt(_recordElapsed),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+        const Spacer(),
+        const Text('Recording...', style: TextStyle(color: Colors.grey)),
+        const SizedBox(width: 12),
+        GestureDetector(
+          onTap: _stopAndSend,
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(color: primary, shape: BoxShape.circle),
+            child:
+                const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _sendButton(Color primary) {
     return GestureDetector(
       key: const ValueKey('send'),
       onTap: widget.isUploading ? null : widget.onSendPressed,
@@ -247,41 +334,30 @@ class _GroupMessageInputState extends State<GroupMessageInput> {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          gradient: widget.isUploading
-              ? null
-              : const LinearGradient(
-                  colors: [Color(0xFF1976D2), Color(0xFF1565C0)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-          color: widget.isUploading ? Colors.grey.shade300 : null,
+          color: widget.isUploading ? Colors.grey.shade300 : primary,
           shape: BoxShape.circle,
-          boxShadow: widget.isUploading
-              ? null
-              : [
-                  BoxShadow(
-                    color: const Color(0xFF1565C0).withOpacity(0.35),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
         ),
         child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
       ),
     );
   }
 
-  Widget _micButton() {
-    return Container(
+  Widget _micButton(Color primary, bool enabled) {
+    return GestureDetector(
       key: const ValueKey('mic'),
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        shape: BoxShape.circle,
+      onTap: enabled ? _startRecording : null,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: enabled
+              ? primary.withOpacity(0.1)
+              : Colors.grey.withOpacity(0.15),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(Icons.mic_rounded,
+            color: enabled ? primary : Colors.grey, size: 22),
       ),
-      child: Icon(Icons.mic_none_rounded,
-          color: Colors.grey.shade400, size: 22),
     );
   }
 }

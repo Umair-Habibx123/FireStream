@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:chat_app/features/services/theme_service.dart';
 
 class ProfileOptionsList extends StatelessWidget {
   final TextEditingController usernameController;
@@ -39,6 +41,9 @@ class ProfileOptionsList extends StatelessWidget {
               color: Colors.purple,
               onTap: onUpdatePassword,
             ),
+          ]),
+          _buildSection('Appearance', [
+            _buildThemeTile(context),
           ]),
           _buildSection('Privacy', [
             _buildTile(
@@ -129,7 +134,7 @@ class ProfileOptionsList extends StatelessWidget {
                     fontWeight: FontWeight.w500,
                     color: isDestructive
                         ? Colors.red
-                        : const Color(0xFF1A1A2E),
+                        : Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -138,6 +143,49 @@ class ProfileOptionsList extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildThemeTile(BuildContext context) {
+    final theme = context.watch<ThemeService>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const color = Colors.indigo;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+              size: 19,
+              color: color,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              'Dark Mode',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: isDark ? Colors.white : Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+          ),
+          Switch(
+            value: theme.mode == ThemeMode.dark ||
+                (theme.mode == ThemeMode.system && isDark),
+            onChanged: (v) =>
+                theme.setMode(v ? ThemeMode.dark : ThemeMode.light),
+          ),
+        ],
       ),
     );
   }
@@ -166,12 +214,12 @@ class ProfileOptionsList extends StatelessWidget {
                         color: Colors.blueAccent, size: 20),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
+                  Text(
                     'Edit Username',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A1A2E),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ],
@@ -184,7 +232,9 @@ class ProfileOptionsList extends StatelessWidget {
                   labelText: 'New Username',
                   labelStyle: TextStyle(color: Colors.grey.shade500),
                   filled: true,
-                  fillColor: Colors.grey.shade50,
+                  fillColor: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white10
+                      : Colors.grey.shade50,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -236,7 +286,7 @@ class ProfileOptionsList extends StatelessWidget {
                         onUpdateUsername();
                         Navigator.of(ctx).pop();
                       },
-                      child: const Text('Update',
+                      child: Text('Update',
                           style: TextStyle(fontWeight: FontWeight.w600)),
                     ),
                   ),

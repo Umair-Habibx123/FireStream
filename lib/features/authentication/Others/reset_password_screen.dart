@@ -61,13 +61,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Error',
+        title: Text('Error',
             style: TextStyle(fontWeight: FontWeight.w700)),
         content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('OK',
+            child: Text('OK',
                 style: TextStyle(color: Color(0xFFFF5722))),
           ),
         ],
@@ -117,7 +117,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  const Text(
+                  Text(
                     'Reset Password',
                     style: TextStyle(
                       color: Colors.white,
@@ -169,7 +169,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         TextField(
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
-          style: const TextStyle(fontSize: 15, color: Color(0xFF1A1A2E)),
+          style: TextStyle(fontSize: 15, color: Theme.of(context).colorScheme.onSurface),
           decoration: InputDecoration(
             labelText: 'Email Address',
             labelStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
@@ -223,7 +223,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       strokeWidth: 2.5,
                     ),
                   )
-                : const Text(
+                : Text(
                     'Send Reset Link',
                     style: TextStyle(
                       fontSize: 15,
@@ -250,12 +250,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               color: Colors.green, size: 32),
         ),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           'Check your inbox',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF1A1A2E),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
@@ -278,7 +278,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 borderRadius: BorderRadius.circular(14),
               ),
             ),
-            child: const Text('Back to Login',
+            child: Text('Back to Login',
                 style: TextStyle(fontWeight: FontWeight.w600)),
           ),
         ),

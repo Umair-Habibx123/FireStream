@@ -99,7 +99,7 @@ class _GroupSelectionDialogState extends State<GroupSelectionDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 0,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       insetPadding:
           const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
       child: ConstrainedBox(
@@ -143,7 +143,7 @@ class _GroupSelectionDialogState extends State<GroupSelectionDialog> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Select Groups',
                               style: TextStyle(
                                 fontSize: 17,
@@ -174,7 +174,7 @@ class _GroupSelectionDialogState extends State<GroupSelectionDialog> {
                           ),
                           child: Text(
                             '$_selectedCount selected',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
@@ -215,7 +215,7 @@ class _GroupSelectionDialogState extends State<GroupSelectionDialog> {
                             decoration: BoxDecoration(
                               color: isSelected
                                   ? const Color(0xFFE3F2FD)
-                                  : const Color(0xFFF5F7FA),
+                                  : (Theme.of(context).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF5F7FA)),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: isSelected
@@ -261,7 +261,7 @@ class _GroupSelectionDialogState extends State<GroupSelectionDialog> {
                                       fontWeight: FontWeight.w500,
                                       color: isSelected
                                           ? const Color(0xFF1565C0)
-                                          : const Color(0xFF1A1A2E),
+                                          : Theme.of(context).colorScheme.onSurface,
                                     ),
                                   ),
                                 ),
@@ -347,7 +347,7 @@ class _GroupSelectionDialogState extends State<GroupSelectionDialog> {
                               child: CircularProgressIndicator(
                                   strokeWidth: 2, color: Colors.white),
                             )
-                          : const Text('Save',
+                          : Text('Save',
                               style: TextStyle(fontWeight: FontWeight.w700)),
                     ),
                   ),
@@ -377,12 +377,12 @@ class _GroupSelectionDialogState extends State<GroupSelectionDialog> {
                 color: Color(0xFF1565C0), size: 28),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'No Groups Available',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF1A1A2E),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 6),

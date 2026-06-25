@@ -65,7 +65,7 @@ class _MessagesSettingsDialogState extends State<MessagesSettingsDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 0,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -89,12 +89,12 @@ class _MessagesSettingsDialogState extends State<MessagesSettingsDialog> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Text(
+                Text(
                   'Message Settings',
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A2E),
+                    color: Theme.of(context).colorScheme.onSurface,
                     letterSpacing: -0.3,
                   ),
                 ),
@@ -170,7 +170,7 @@ class _MessagesSettingsDialogState extends State<MessagesSettingsDialog> {
                     Expanded(
                       child: Text(
                         _errorMessage!,
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: Color(0xFFD32F2F), fontSize: 13),
                       ),
                     ),
@@ -221,7 +221,7 @@ class _MessagesSettingsDialogState extends State<MessagesSettingsDialog> {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white),
                           )
-                        : const Text('Save',
+                        : Text('Save',
                             style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ),
@@ -246,7 +246,7 @@ class _MessagesSettingsDialogState extends State<MessagesSettingsDialog> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFE3F2FD) : const Color(0xFFF5F7FA),
+          color: isSelected ? const Color(0xFFE3F2FD) : Colors.grey.withOpacity(0.12),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? const Color(0xFF1565C0) : Colors.transparent,
@@ -280,7 +280,7 @@ class _MessagesSettingsDialogState extends State<MessagesSettingsDialog> {
                       fontWeight: FontWeight.w600,
                       color: isSelected
                           ? const Color(0xFF1565C0)
-                          : const Color(0xFF1A1A2E),
+                          : Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 2),

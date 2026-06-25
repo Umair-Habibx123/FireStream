@@ -23,7 +23,7 @@ class ParticipantListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: Theme.of(context).cardColor,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -91,10 +91,10 @@ class ParticipantListItem extends StatelessWidget {
                         Flexible(
                           child: Text(
                             userName,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14.5,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF1A1A2E),
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -108,7 +108,7 @@ class ParticipantListItem extends StatelessWidget {
                               color: const Color(0xFF1565C0).withOpacity(0.08),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Text(
+                            child: Text(
                               'You',
                               style: TextStyle(
                                 fontSize: 11,
@@ -143,7 +143,7 @@ class ParticipantListItem extends StatelessWidget {
                         color: const Color(0xFFFFA000).withOpacity(0.3),
                         width: 1),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Admin',
                     style: TextStyle(
                       fontSize: 11,

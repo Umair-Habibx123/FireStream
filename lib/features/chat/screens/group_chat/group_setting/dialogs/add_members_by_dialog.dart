@@ -62,7 +62,7 @@ class _AddMembersByDialogState extends State<AddMembersByDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 0,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -86,13 +86,13 @@ class _AddMembersByDialogState extends State<AddMembersByDialog> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Who Can Add Members',
                     style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A1A2E),
+                      color: Theme.of(context).colorScheme.onSurface,
                       letterSpacing: -0.3,
                     ),
                   ),
@@ -168,7 +168,7 @@ class _AddMembersByDialogState extends State<AddMembersByDialog> {
                     Expanded(
                       child: Text(
                         _errorMessage!,
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: Color(0xFFD32F2F), fontSize: 13),
                       ),
                     ),
@@ -219,7 +219,7 @@ class _AddMembersByDialogState extends State<AddMembersByDialog> {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white),
                           )
-                        : const Text('Save',
+                        : Text('Save',
                             style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ),
@@ -246,7 +246,7 @@ class _AddMembersByDialogState extends State<AddMembersByDialog> {
         decoration: BoxDecoration(
           color: isSelected
               ? const Color(0xFFE3F2FD)
-              : const Color(0xFFF5F7FA),
+              : Colors.grey.withOpacity(0.12),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
@@ -282,7 +282,7 @@ class _AddMembersByDialogState extends State<AddMembersByDialog> {
                       fontWeight: FontWeight.w600,
                       color: isSelected
                           ? const Color(0xFF1565C0)
-                          : const Color(0xFF1A1A2E),
+                          : Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 2),

@@ -245,11 +245,11 @@ class _LoginScreenState extends State<LoginScreen>
             ),
             title: Text(
               title,
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
             ),
             content: Text(
               message,
-              style: const TextStyle(color: Colors.black54),
+              style: TextStyle(color: Colors.black54),
             ),
             actions: [
               if (actionLabel != null && onAction != null)
@@ -257,12 +257,12 @@ class _LoginScreenState extends State<LoginScreen>
                   onPressed: onAction,
                   child: Text(
                     actionLabel,
-                    style: const TextStyle(color: Color(0xFFFF5722)),
+                    style: TextStyle(color: Color(0xFFFF5722)),
                   ),
                 ),
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text(
+                child: Text(
                   'OK',
                   style: TextStyle(color: Color(0xFFFF5722)),
                 ),
@@ -345,7 +345,7 @@ class _LoginScreenState extends State<LoginScreen>
                         ),
                         const SizedBox(height: 20),
 
-                        const Text(
+                        Text(
                           'Welcome back',
                           style: TextStyle(
                             color: Colors.white,
@@ -382,12 +382,12 @@ class _LoginScreenState extends State<LoginScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Sign In',
                                 style: TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF1A1A2E),
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                               const SizedBox(height: 24),
@@ -458,7 +458,7 @@ class _LoginScreenState extends State<LoginScreen>
                                     tapTargetSize:
                                         MaterialTapTargetSize.shrinkWrap,
                                   ),
-                                  child: const Text(
+                                  child: Text(
                                     'Forgot Password?',
                                     style: TextStyle(
                                       color: Color(0xFFFF5722),
@@ -499,7 +499,7 @@ class _LoginScreenState extends State<LoginScreen>
                                               strokeWidth: 2.5,
                                             ),
                                           )
-                                          : const Text(
+                                          : Text(
                                             'Log In',
                                             style: TextStyle(
                                               fontSize: 16,
@@ -559,10 +559,10 @@ class _LoginScreenState extends State<LoginScreen>
                                         height: 22,
                                       ),
                                       const SizedBox(width: 12),
-                                      const Text(
+                                      Text(
                                         'Continue with Google',
                                         style: TextStyle(
-                                          color: Color(0xFF1A1A2E),
+                                          color: Theme.of(context).colorScheme.onSurface,
                                           fontWeight: FontWeight.w600,
                                           fontSize: 15,
                                         ),
@@ -601,7 +601,7 @@ class _LoginScreenState extends State<LoginScreen>
       focusNode: focusNode,
       obscureText: obscureText,
       keyboardType: keyboardType,
-      style: const TextStyle(fontSize: 15, color: Color(0xFF1A1A2E)),
+      style: TextStyle(fontSize: 15, color: Theme.of(context).colorScheme.onSurface),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: Colors.grey[500], fontSize: 14),

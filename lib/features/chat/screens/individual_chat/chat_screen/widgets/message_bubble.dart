@@ -14,6 +14,8 @@ class MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final receivedBg = Theme.of(context).cardColor;
+    final receivedText = Theme.of(context).colorScheme.onSurface;
     return Align(
       alignment: isSentByCurrentUser
           ? Alignment.centerRight
@@ -34,7 +36,7 @@ class MessageBubble extends StatelessWidget {
                   isSent: isSentByCurrentUser,
                   color: isSentByCurrentUser
                       ? const Color(0xFF1565C0)
-                      : Colors.white,
+                      : receivedBg,
                 )
               : null,
           child: Container(
@@ -45,7 +47,7 @@ class MessageBubble extends StatelessWidget {
             decoration: BoxDecoration(
               color: isSentByCurrentUser
                   ? const Color(0xFF1565C0)
-                  : Colors.white,
+                  : receivedBg,
               borderRadius: BorderRadius.only(
                 topLeft: const Radius.circular(18),
                 topRight: const Radius.circular(18),
@@ -67,9 +69,7 @@ class MessageBubble extends StatelessWidget {
             child: Text(
               text,
               style: TextStyle(
-                color: isSentByCurrentUser
-                    ? Colors.white
-                    : const Color(0xFF1A1A2E),
+                color: isSentByCurrentUser ? Colors.white : receivedText,
                 fontSize: 15,
                 height: 1.45,
                 letterSpacing: 0.1,

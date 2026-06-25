@@ -292,7 +292,6 @@ class _AddNewChatScreenState extends State<AddNewChatScreen> {
     final isShowingContacts = _emailController.text.isEmpty;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FC),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -317,7 +316,7 @@ class _AddNewChatScreenState extends State<AddNewChatScreen> {
               color: Colors.white, size: 20),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
+        title: Text(
           'New Conversation',
           style: TextStyle(
             color: Colors.white,
@@ -350,8 +349,8 @@ class _AddNewChatScreenState extends State<AddNewChatScreen> {
                   controller: _emailController,
                   focusNode: _focusNode,
                   keyboardType: TextInputType.emailAddress,
-                  style: const TextStyle(
-                      fontSize: 15, color: Color(0xFF1A1A2E)),
+                  style: TextStyle(
+                      fontSize: 15, color: Theme.of(context).colorScheme.onSurface),
                   decoration: InputDecoration(
                     hintText: 'Search by email address...',
                     hintStyle: TextStyle(
@@ -506,10 +505,10 @@ class _AddNewChatScreenState extends State<AddNewChatScreen> {
                     children: [
                       Text(
                         user['username'] ?? 'Unknown',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1A1A2E),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -568,10 +567,10 @@ class _AddNewChatScreenState extends State<AddNewChatScreen> {
           const SizedBox(height: 16),
           Text(
             isContacts ? 'No contacts yet' : 'No results found',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1A1A2E),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 6),

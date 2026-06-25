@@ -1,4 +1,5 @@
 import 'package:chat_app/features/services/connectivity_service.dart';
+import 'package:chat_app/features/services/theme_service.dart';
 import 'package:chat_app/no_internet_modal.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:chat_app/firebase_options.dart';
@@ -15,8 +16,11 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ConnectivityService(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ConnectivityService()),
+        ChangeNotifierProvider(create: (_) => ThemeService()),
+      ],
       child: const MyApp(),
     ),
   );
@@ -27,12 +31,12 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeService>();
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorSchemeSeed: const Color(0xFF1565C0),
-        useMaterial3: true,
-      ),
+      themeMode: theme.mode,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
       home: const SplashScreen(),
       builder: (context, child) {
         return Consumer<ConnectivityService>(
@@ -41,7 +45,6 @@ class MyApp extends StatelessWidget {
               children: [
                 child!,
                 if (!connectivity.hasInternet) ...[
-                  // Blurred barrier
                   ModalBarrier(
                     color: Colors.black.withOpacity(0.55),
                     dismissible: false,

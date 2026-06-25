@@ -58,9 +58,9 @@ class _AddParticipantsSheetState extends State<AddParticipantsSheet> {
       maxChildSize: 0.95,
       expand: false,
       builder: (context, scrollController) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
           children: [
@@ -84,12 +84,12 @@ class _AddParticipantsSheetState extends State<AddParticipantsSheet> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Manage Participants',
                               style: TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w800,
-                                color: Color(0xFF1A1A2E),
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -110,7 +110,7 @@ class _AddParticipantsSheetState extends State<AddParticipantsSheet> {
                         ),
                         child: Text(
                           '${_userList.length} contacts',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             color: Color(0xFF1565C0),
                             fontWeight: FontWeight.w600,
@@ -125,12 +125,12 @@ class _AddParticipantsSheetState extends State<AddParticipantsSheet> {
                   Container(
                     height: 44,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF2F4F7),
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F4F7),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: TextField(
                       onChanged: (v) => setState(() => _searchQuery = v),
-                      style: const TextStyle(fontSize: 14),
+                      style: TextStyle(fontSize: 14),
                       decoration: InputDecoration(
                         hintText: 'Search contacts...',
                         hintStyle: TextStyle(
@@ -173,7 +173,7 @@ class _AddParticipantsSheetState extends State<AddParticipantsSheet> {
                           itemBuilder: (context, index) {
                             final user = _filteredList[index];
                             final isBlocked = user['isBlocked'] ?? false;
-                            return _buildUserTile(user, isBlocked);
+                            return _buildUserTile(context, user, isBlocked);
                           },
                         ),
             ),
@@ -182,7 +182,7 @@ class _AddParticipantsSheetState extends State<AddParticipantsSheet> {
             Container(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.06),
@@ -223,7 +223,7 @@ class _AddParticipantsSheetState extends State<AddParticipantsSheet> {
                       _selectedCount > 0
                           ? 'Save Changes ($_selectedCount selected)'
                           : 'Save Changes',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                       ),
@@ -238,7 +238,8 @@ class _AddParticipantsSheetState extends State<AddParticipantsSheet> {
     );
   }
 
-  Widget _buildUserTile(Map<String, dynamic> user, bool isBlocked) {
+  Widget _buildUserTile(
+      BuildContext context, Map<String, dynamic> user, bool isBlocked) {
     final profilePic = user['profilePic'] as String? ?? '';
     final username = user['username'] as String? ?? '';
     final email = user['email'] as String? ?? '';
@@ -326,10 +327,10 @@ class _AddParticipantsSheetState extends State<AddParticipantsSheet> {
                         children: [
                           Text(
                             username,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
-                              color: Color(0xFF1A1A2E),
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 2),

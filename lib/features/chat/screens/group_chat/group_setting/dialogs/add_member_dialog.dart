@@ -44,7 +44,7 @@ Widget build(BuildContext context) {
   return Dialog(
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     elevation: 0,
-    backgroundColor: Colors.white,
+    backgroundColor: Theme.of(context).cardColor,
     child: Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -68,12 +68,12 @@ Widget build(BuildContext context) {
                 ),
               ),
               const SizedBox(width: 12),
-              const Text(
+              Text(
                 'Add Admin', // or 'Add Member'
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF1A1A2E),
+                  color: Theme.of(context).colorScheme.onSurface,
                   letterSpacing: -0.3,
                 ),
               ),
@@ -84,12 +84,12 @@ Widget build(BuildContext context) {
           TextField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
-            style: const TextStyle(fontSize: 15),
+            style: TextStyle(fontSize: 15),
             decoration: InputDecoration(
               hintText: 'Enter email address',
               hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
               filled: true,
-              fillColor: const Color(0xFFF5F7FA),
+              fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF5F7FA),
               prefixIcon: const Icon(Icons.email_rounded,
                   color: Color(0xFF1565C0), size: 20),
               border: OutlineInputBorder(
@@ -136,7 +136,7 @@ Widget build(BuildContext context) {
                   Expanded(
                     child: Text(
                       _errorMessage!,
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: Color(0xFFD32F2F), fontSize: 13),
                     ),
                   ),
@@ -175,7 +175,7 @@ Widget build(BuildContext context) {
                         borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: _isChecking ? null : _handleSave,
-                  child: const Text('Add',
+                  child: Text('Add',
                       style: TextStyle(fontWeight: FontWeight.w700)),
                 ),
               ),

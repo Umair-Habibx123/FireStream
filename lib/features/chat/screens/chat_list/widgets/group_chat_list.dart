@@ -73,12 +73,12 @@ class GroupChatList extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'No group chats yet',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1A1A2E),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
@@ -95,7 +95,7 @@ class GroupChatList extends StatelessWidget {
                     builder: (_) => const AddGroupChatScreen()),
               ),
               icon: const Icon(Icons.group_add_rounded, size: 18),
-              label: const Text('Create a Group'),
+              label: Text('Create a Group'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF1565C0),
                 foregroundColor: Colors.white,

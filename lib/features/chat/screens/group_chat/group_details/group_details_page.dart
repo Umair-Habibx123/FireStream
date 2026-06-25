@@ -97,7 +97,7 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(title,
-            style: const TextStyle(fontWeight: FontWeight.w700)),
+            style: TextStyle(fontWeight: FontWeight.w700)),
         content: Text(body),
         actions: [
           TextButton(
@@ -384,7 +384,6 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F8),
       appBar: const GroupDetailsAppBar(),
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance
@@ -452,12 +451,12 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
                     sliver: SliverToBoxAdapter(
                       child: Row(
                         children: [
-                          const Text(
+                          Text(
                             'Participants',
                             style: TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 15,
-                              color: Color(0xFF1A1A2E),
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -470,7 +469,7 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
                             ),
                             child: Text(
                               '${sortedParticipants.length}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
                                 color: Color(0xFF1565C0),
                                 fontWeight: FontWeight.w700,

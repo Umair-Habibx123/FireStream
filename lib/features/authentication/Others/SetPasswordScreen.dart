@@ -60,13 +60,13 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Error',
+        title: Text('Error',
             style: TextStyle(fontWeight: FontWeight.w700)),
         content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('OK',
+            child: Text('OK',
                 style: TextStyle(color: Color(0xFFFF5722))),
           ),
         ],
@@ -118,7 +118,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  const Text(
+                  Text(
                     'Create Password',
                     style: TextStyle(
                       color: Colors.white,
@@ -191,7 +191,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                                       strokeWidth: 2.5,
                                     ),
                                   )
-                                : const Text(
+                                : Text(
                                     'Set Password & Continue',
                                     style: TextStyle(
                                       fontSize: 15,
@@ -222,7 +222,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
     return TextField(
       controller: controller,
       obscureText: !isVisible,
-      style: const TextStyle(fontSize: 15, color: Color(0xFF1A1A2E)),
+      style: TextStyle(fontSize: 15, color: Theme.of(context).colorScheme.onSurface),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: Colors.grey[500], fontSize: 14),

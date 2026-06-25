@@ -83,12 +83,12 @@ class IndividualChatList extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'No conversations yet',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1A1A2E),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
@@ -108,7 +108,7 @@ class IndividualChatList extends StatelessWidget {
                     builder: (_) => const AddNewChatScreen()),
               ),
               icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Start a Chat'),
+              label: Text('Start a Chat'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF1565C0),
                 foregroundColor: Colors.white,
